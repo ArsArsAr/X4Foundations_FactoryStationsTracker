@@ -14,7 +14,8 @@ const WARES_DATA = {
     "batchSize": 0,
     "inputs": [],
     "tier": 0,
-    "storageType": "Liquid"
+    "storageType": "Liquid",
+    "isMined": true
   },
   "hydrogen": {
     "id": "hydrogen",
@@ -30,7 +31,8 @@ const WARES_DATA = {
     "batchSize": 0,
     "inputs": [],
     "tier": 0,
-    "storageType": "Liquid"
+    "storageType": "Liquid",
+    "isMined": true
   },
   "ice": {
     "id": "ice",
@@ -46,7 +48,8 @@ const WARES_DATA = {
     "batchSize": 0,
     "inputs": [],
     "tier": 0,
-    "storageType": "Solid"
+    "storageType": "Solid",
+    "isMined": true
   },
   "methane": {
     "id": "methane",
@@ -62,7 +65,8 @@ const WARES_DATA = {
     "batchSize": 0,
     "inputs": [],
     "tier": 0,
-    "storageType": "Liquid"
+    "storageType": "Liquid",
+    "isMined": true
   },
   "ore": {
     "id": "ore",
@@ -78,7 +82,8 @@ const WARES_DATA = {
     "batchSize": 0,
     "inputs": [],
     "tier": 0,
-    "storageType": "Solid"
+    "storageType": "Solid",
+    "isMined": true
   },
   "rawscrap": {
     "id": "rawscrap",
@@ -94,7 +99,8 @@ const WARES_DATA = {
     "batchSize": 0,
     "inputs": [],
     "tier": 0,
-    "storageType": "Solid"
+    "storageType": "Solid",
+    "isMined": true
   },
   "silicon": {
     "id": "silicon",
@@ -110,7 +116,8 @@ const WARES_DATA = {
     "batchSize": 0,
     "inputs": [],
     "tier": 0,
-    "storageType": "Solid"
+    "storageType": "Solid",
+    "isMined": true
   },
   "antimattercells": {
     "id": "antimattercells",
@@ -135,7 +142,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 1,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "computronicsubstrate": {
     "id": "computronicsubstrate",
@@ -168,7 +176,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 1,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "graphene": {
     "id": "graphene",
@@ -193,7 +202,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 1,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "metallicmicrolattice": {
     "id": "metallicmicrolattice",
@@ -222,7 +232,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 1,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "proteinpaste": {
     "id": "proteinpaste",
@@ -251,7 +262,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 1,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "refinedmetals": {
     "id": "refinedmetals",
@@ -276,7 +288,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 1,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "scrapmetal": {
     "id": "scrapmetal",
@@ -301,7 +314,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 1,
-    "storageType": "Solid"
+    "storageType": "Solid",
+    "isMined": false
   },
   "siliconwafers": {
     "id": "siliconwafers",
@@ -326,7 +340,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 1,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "stimulants": {
     "id": "stimulants",
@@ -355,7 +370,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 1,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "superfluidcoolant": {
     "id": "superfluidcoolant",
@@ -380,7 +396,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 1,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "teladianium": {
     "id": "teladianium",
@@ -405,7 +422,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 1,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "water": {
     "id": "water",
@@ -430,7 +448,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 1,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "advancedcomposites": {
     "id": "advancedcomposites",
@@ -459,7 +478,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 2,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "bogas": {
     "id": "bogas",
@@ -484,7 +504,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 2,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "cheltmeat": {
     "id": "cheltmeat",
@@ -509,7 +530,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 2,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "engineparts": {
     "id": "engineparts",
@@ -538,7 +560,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 2,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "hullparts": {
     "id": "hullparts",
@@ -567,7 +590,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 2,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "majasnails": {
     "id": "majasnails",
@@ -592,7 +616,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 2,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "meat": {
     "id": "meat",
@@ -617,7 +642,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 2,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "microchips": {
     "id": "microchips",
@@ -642,7 +668,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 2,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "plankton": {
     "id": "plankton",
@@ -667,7 +694,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 2,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "plasmaconductors": {
     "id": "plasmaconductors",
@@ -696,7 +724,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 2,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "quantumtubes": {
     "id": "quantumtubes",
@@ -725,7 +754,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 2,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "scanningarrays": {
     "id": "scanningarrays",
@@ -754,7 +784,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 2,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "scruffinfruit": {
     "id": "scruffinfruit",
@@ -779,7 +810,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 2,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "siliconcarbide": {
     "id": "siliconcarbide",
@@ -812,7 +844,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 2,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "smartchips": {
     "id": "smartchips",
@@ -837,7 +870,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 2,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "sojabeans": {
     "id": "sojabeans",
@@ -862,7 +896,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 2,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "spices": {
     "id": "spices",
@@ -887,7 +922,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 2,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "sunriseflowers": {
     "id": "sunriseflowers",
@@ -912,7 +948,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 2,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "swampplant": {
     "id": "swampplant",
@@ -937,7 +974,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 2,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "terranmre": {
     "id": "terranmre",
@@ -962,7 +1000,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 2,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "wheat": {
     "id": "wheat",
@@ -987,7 +1026,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 2,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "advancedelectronics": {
     "id": "advancedelectronics",
@@ -1016,7 +1056,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 3,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "antimatterconverters": {
     "id": "antimatterconverters",
@@ -1045,7 +1086,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 3,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "bofu": {
     "id": "bofu",
@@ -1074,7 +1116,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 3,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "claytronics": {
     "id": "claytronics",
@@ -1107,7 +1150,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 3,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "dronecomponents": {
     "id": "dronecomponents",
@@ -1144,7 +1188,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 3,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "fieldcoils": {
     "id": "fieldcoils",
@@ -1173,7 +1218,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 3,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "foodrations": {
     "id": "foodrations",
@@ -1206,7 +1252,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 3,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "majadust": {
     "id": "majadust",
@@ -1235,7 +1282,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 3,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "medicalsupplies": {
     "id": "medicalsupplies",
@@ -1268,7 +1316,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 3,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "missilecomponents": {
     "id": "missilecomponents",
@@ -1297,7 +1346,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 3,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "nostropoil": {
     "id": "nostropoil",
@@ -1330,7 +1380,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 3,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "shieldcomponents": {
     "id": "shieldcomponents",
@@ -1359,7 +1410,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 3,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "sojahusk": {
     "id": "sojahusk",
@@ -1392,7 +1444,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 3,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "spacefuel": {
     "id": "spacefuel",
@@ -1421,7 +1474,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 3,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "spaceweed": {
     "id": "spaceweed",
@@ -1450,7 +1504,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 3,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "turretcomponents": {
     "id": "turretcomponents",
@@ -1483,7 +1538,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 3,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "weaponscomponents": {
     "id": "weaponscomponents",
@@ -1512,7 +1568,8 @@ const WARES_DATA = {
       }
     ],
     "tier": 3,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "energycells": {
     "id": "energycells",
@@ -1528,6 +1585,7 @@ const WARES_DATA = {
     "batchSize": 0,
     "inputs": [],
     "tier": 0,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   }
 };

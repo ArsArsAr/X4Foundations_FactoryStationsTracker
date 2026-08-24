@@ -610,19 +610,45 @@ body::before {
 
 .node-built-badge {
   position: absolute;
-  top: -7px;
+  top: -9px;
   right: 10px;
-  width: 16px;
-  height: 16px;
+  height: 18px;
+  min-width: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 3px;
+  padding: 0 4px;
   font-size: 10px;
   line-height: 1;
   color: var(--bg);
   background: var(--tier1);
-  border-radius: 50%;
+  border-radius: 999px;
   box-shadow: 0 0 0 2px var(--bg-panel);
+}
+
+.node-built-badge svg { flex-shrink: 0; }
+
+.node-built-badge .node-module-count {
+  width: 24px;
+  height: 14px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.18);
+  color: var(--bg);
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  cursor: text;
+}
+
+.node-built-badge .node-module-count:focus-visible {
+  outline: 1.5px solid var(--bg);
+  outline-offset: 1px;
+  border-radius: 999px;
 }
 
 /* ---------- factories drawer ---------- */

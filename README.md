@@ -14,7 +14,7 @@ X4's economy is a real dependency graph — almost everything needs Energy Cells
 
 - **Full production chains** — select any ware and see every input it depends on, tier by tier, down to raw materials, connected as a diagram.
 - **Live rate math** — set a target output (units/hour, or "1 module") and every node in the chain shows the module count and resource rate needed to actually hit it, correctly combining shared inputs (e.g. Energy Cells feeding a dozen different nodes sums to one real total instead of being double-counted).
-- **Track what you've built** — tick a checkbox for a quick "I produce this," or enter an exact module count for precision. Saved locally in your browser, so it's still there next time you open the app.
+- **Track what you've built** — tick a checkbox for a quick "I produce this," or enter an exact module count for precision, either in the sidebar or right on the checkmark badge of any node in the chain diagram. Saved locally in your browser, so it's still there next time you open the app.
 - **Bottleneck detection** — a real supply-vs-demand pass across everything you've entered: for every ware your built modules consume, it compares what your built producers actually make against what your built consumers need, and lists every shortfall, worst first, with how many more modules would close the gap.
 - **Suggested next build** — ranks every ware you *haven't* built by how many resources its full chain still needs that you don't already produce (raw materials included), so you can always see the cheapest next factory to add.
 - **Storage type, prices, cycle times** — every ware card shows its storage class (Solid / Liquid / Container), average price, batch size, and cycle time, sourced from current-patch game data.
@@ -26,10 +26,10 @@ X4's economy is a real dependency graph — almost everything needs Energy Cells
 
 ### Using it
 
-1. **Browse or search** for a ware in the left sidebar, grouped by tier (Raw Materials, Tier 1, Tier 2, Tier 3).
+1. **Browse or search** for a ware in the left sidebar, grouped by tier (Base Resources, Tier 1, Tier 2, Tier 3).
 2. **Click a ware's name** to see its full production chain in the main panel. Set a target output rate at the top (or hit **1 module** to size the chain for exactly one production module of that ware).
 3. **Click any node** in the chain to see its full detail panel — price, volume, cycle time, and what it's used to make.
-4. **Mark what you've actually built**: tick the checkbox next to a ware in the sidebar for a quick "I produce this," or type an exact module count if you want precise bottleneck math. Raw materials get a checkbox too (no quantity — just "I have a source for this").
+4. **Mark what you've actually built**: tick the checkbox next to a ware for a quick "I produce this," or type an exact module count if you want precise bottleneck math — from the sidebar, or straight off the green checkmark badge on any node in the chain diagram once it's marked built. Mined materials (Ore, Silicon, Ice, Helium, Hydrogen, Methane, Raw Scrap) get a checkbox only (no quantity — just "I have a source for this"); everything else, including Energy Cells, is a real module with a trackable count.
 5. Open the **My Factories** drawer at the bottom of the page to see:
    - Everything you've marked as built, as removable chips.
    - **Bottlenecks** — where your built consumers need more than your built producers make.
@@ -65,8 +65,9 @@ No build tooling — it's vanilla HTML/CSS/JS, kept that way on purpose so it al
   "volume": 14,
   "cycleTime": 150,             // seconds per production cycle
   "batchSize": 88,              // units produced per cycle
-  "tier": 1,                    // computed: 1 + max(tier of inputs), raw = 0
+  "tier": 1,                    // computed: 1 + max(tier of inputs), tier 0 = no ware inputs
   "storageType": "Container",   // Solid, Liquid, or Container (X4's own storage classes)
+  "isMined": false,             // true only for the 7 wares actually mined/harvested by ships
   "inputs": [
     { "wareID": "energycells", "amount": 90 },
     { "wareID": "ore", "amount": 240 }
@@ -74,9 +75,9 @@ No build tooling — it's vanilla HTML/CSS/JS, kept that way on purpose so it al
 }
 ```
 
-Raw materials (`tier: 0`) have `inputs: []`, `cycleTime: 0`, `batchSize: 0` — they're mined/harvested, not produced in a module.
+Tier 0 (`inputs: []`) isn't the same thing as "mined" — it just means nothing else feeds into it. Ore, Silicon, Ice, Helium, Hydrogen, Methane, and Raw Scrap are both tier 0 *and* `isMined: true`. Energy Cells is also tier 0 (a Solar Power Plant needs no material inputs) but `isMined: false` — it's a real built module, it just has no `cycleTime`/`batchSize` on record (Roguey's own data notes it "can not be constructed" in the normal recipe sense — X4 generates it from sunlight rather than a fixed batch/cycle recipe). The UI uses `isMined`, not `tier`, to decide whether a ware gets the checkbox-only "I have a source" treatment or the full module-count treatment.
 
-**Caching note**: if you edit `index.html`, `style.css`, or `app.js` and a browser reload doesn't seem to pick up the change, your browser is serving a cached copy — bump the `?v=8` query string on the `<link>`/`<script>` tags at the bottom of `index.html` to the next number to force a fresh fetch.
+**Caching note**: if you edit `index.html`, `style.css`, or `app.js` and a browser reload doesn't seem to pick up the change, your browser is serving a cached copy — bump the `?v=11` query string on the `<link>`/`<script>` tags at the bottom of `index.html` to the next number to force a fresh fetch.
 
 ## Known limitations
 

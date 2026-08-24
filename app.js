@@ -67,7 +67,10 @@ function clearAllData() {
   if (state.selected) renderChain(state.selected);
 }
 
-const TIER_LABELS = { 0: "Raw Materials", 1: "Tier 1", 2: "Tier 2", 3: "Tier 3", 4: "Tier 4+" };
+// Tier 0 mixes true mined materials (Ore, Silicon, ...) with Energy Cells,
+// which is a real built module (Solar Power Plant) that just happens to
+// need no material inputs — "Raw Materials" would misclassify it.
+const TIER_LABELS = { 0: "Base Resources", 1: "Tier 1", 2: "Tier 2", 3: "Tier 3", 4: "Tier 4+" };
 
 // Authored SVG icons (one consistent stroke weight) — no unicode glyphs standing in for icons.
 const ICONS = {
@@ -206,10 +209,10 @@ function buildSidebar() {
         toggle.checked = isBuilt(w.id);
         toggle.addEventListener("click", (e) => e.stopPropagation());
 
-        if (w.tier === 0) {
-          // raw materials are mined, not built as a counted module — the
-          // checkbox just confirms "I have a source for this" so it stops
-          // showing up as an untracked bottleneck; there's no quantity to enter.
+        if (w.isMined) {
+          // mined materials aren't built as a counted module — the checkbox
+          // just confirms "I have a source for this" so it stops showing up
+          // as an untracked bottleneck; there's no quantity to enter.
           toggle.title = "I mine/source this — hide it from bottlenecks";
           toggle.addEventListener("change", () => setModuleCount(w.id, toggle.checked ? 1 : 0));
 
@@ -383,7 +386,8 @@ function setModuleCount(id, rawValue) {
 }
 
 function renderFactoriesDrawer() {
-  els.builtCount.textContent = `(${state.moduleCounts.size})`;
+  const builtModuleCount = [...state.moduleCounts.keys()].filter((id) => !state.wares[id].isMined).length;
+  els.builtCount.textContent = `(${builtModuleCount})`;
   renderBuiltList();
   renderBottlenecks();
   renderSuggestions();
@@ -391,7 +395,11 @@ function renderFactoriesDrawer() {
 
 function renderBuiltList() {
   const wares = state.wares;
-  const ids = [...state.moduleCounts.keys()].sort((a, b) => wares[a].label.localeCompare(wares[b].label));
+  // mined materials are "I have a source for this", not a built module —
+  // they're tracked for bottleneck/suggestion purposes but don't belong in this list
+  const ids = [...state.moduleCounts.keys()]
+    .filter((id) => !wares[id].isMined)
+    .sort((a, b) => wares[a].label.localeCompare(wares[b].label));
 
   if (!ids.length) {
     els.builtList.innerHTML = `<div class="drawer-empty">Enter module counts in the left list to add them here.</div>`;
@@ -418,9 +426,11 @@ function renderBuiltList() {
    Bottlenecks: given the modules the player has actually built, find
    every ware where the built consumers demand more than the built
    producers supply — starved production lines and modules missing
-   outright (supply = 0). Raw materials are mining, not a counted
-   module in this data model, so they're excluded from supply/demand
-   accounting the same way the chain view treats them.
+   outright (supply = 0). Anything with no batchSize/cycleTime (mined
+   materials, and Energy Cells which has no fixed production rate on
+   record) can't contribute a real supply number, so it's excluded from
+   that side of the accounting — checking its box just tells the panel
+   below "trust me, I have this covered."
 --------------------------------------------------------------------- */
 
 function computeBottlenecks() {
@@ -481,7 +491,7 @@ function renderBottlenecks() {
     const w = wares[r.id];
     const missing = r.supply === 0;
     const detail = r.isRaw
-      ? `Need ${formatRate(r.demand)}/hr &mdash; mining not tracked here`
+      ? `Need ${formatRate(r.demand)}/hr &mdash; ${w.isMined ? "mining" : "production rate"} not tracked here`
       : missing
         ? `Need ${formatRate(r.demand)}/hr, producing none`
         : `Producing ${formatRate(r.supply)}/hr, need ${formatRate(r.demand)}/hr`;
@@ -506,7 +516,7 @@ function renderBottlenecks() {
 
 function computeSuggestions() {
   const wares = state.wares;
-  const candidates = Object.values(wares).filter((w) => w.tier > 0 && !isBuilt(w.id));
+  const candidates = Object.values(wares).filter((w) => !w.isMined && !isBuilt(w.id));
 
   return candidates
     .map((w) => {
@@ -602,16 +612,27 @@ function buildNodeEl(id, nodeData, isRoot) {
   const stats = [`<span><b>${rateTxt}</b> /hr needed</span>`];
   if (w.cycleTime) {
     stats.push(`<span>${w.batchSize} units / ${formatTime(w.cycleTime)} cycle</span>`);
-  } else {
+  } else if (w.isMined) {
     stats.push(`<span>Mined / harvested</span>`);
+  } else {
+    stats.push(`<span>Built module &mdash; no fixed rate</span>`);
   }
   stats.push(`<span>avg <b>${formatPrice(w.price.avg)}</b>/unit</span>`);
   stats.push(`<span>${w.storageType} storage</span>`);
 
   const wareIsBuilt = isBuilt(id);
+  // mined materials only ever get a boolean "I have this" checkbox in the
+  // sidebar (no quantity concept) — match that here instead of offering a
+  // module count that doesn't mean anything for them.
+  const showCountEditor = wareIsBuilt && !w.isMined;
 
   el.innerHTML = `
-    ${wareIsBuilt ? `<div class="node-built-badge" title="Already built">${ICONS.check}</div>` : ""}
+    ${wareIsBuilt ? `
+      <div class="node-built-badge" title="Already built">
+        ${ICONS.check}
+        ${showCountEditor ? `<input type="number" class="node-module-count" min="1" step="1" value="${getCount(id)}" title="Modules built — click to change">` : ""}
+      </div>
+    ` : ""}
     <div class="node-name">${tierDot(w.tier)}<span>${w.label}</span></div>
     <div class="node-stats">${stats.map((s) => `<div>${s}</div>`).join("")}</div>
     ${nodeData.modules != null ? `<div class="node-modules">${nodeData.modules} module${nodeData.modules === 1 ? "" : "s"}</div>` : ""}
@@ -619,6 +640,16 @@ function buildNodeEl(id, nodeData, isRoot) {
 
   el.addEventListener("click", () => showDetails(id));
   makeFocusable(el);
+
+  if (showCountEditor) {
+    const countInput = el.querySelector(".node-module-count");
+    // the whole card is itself a click/keyboard target (opens details) —
+    // stop this control's own interactions from also triggering that.
+    countInput.addEventListener("click", (e) => e.stopPropagation());
+    countInput.addEventListener("keydown", (e) => e.stopPropagation());
+    countInput.addEventListener("change", () => setModuleCount(id, countInput.value));
+  }
+
   return el;
 }
 
@@ -694,7 +725,7 @@ function showDetails(id) {
           <span class="input-row-amt">${i.amount}</span>
         </div>`;
       }).join("")}
-    ` : `<div class="detail-section-title">Raw material &mdash; mined or harvested</div>`}
+    ` : `<div class="detail-section-title">${w.isMined ? "Raw material &mdash; mined or harvested" : "Built module &mdash; needs no material inputs"}</div>`}
 
     ${usedBy.length ? `
       <div class="detail-section-title" style="margin-top:16px;">Used to make</div>

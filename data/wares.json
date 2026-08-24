@@ -13,7 +13,8 @@
     "batchSize": 0,
     "inputs": [],
     "tier": 0,
-    "storageType": "Liquid"
+    "storageType": "Liquid",
+    "isMined": true
   },
   "hydrogen": {
     "id": "hydrogen",
@@ -29,7 +30,8 @@
     "batchSize": 0,
     "inputs": [],
     "tier": 0,
-    "storageType": "Liquid"
+    "storageType": "Liquid",
+    "isMined": true
   },
   "ice": {
     "id": "ice",
@@ -45,7 +47,8 @@
     "batchSize": 0,
     "inputs": [],
     "tier": 0,
-    "storageType": "Solid"
+    "storageType": "Solid",
+    "isMined": true
   },
   "methane": {
     "id": "methane",
@@ -61,7 +64,8 @@
     "batchSize": 0,
     "inputs": [],
     "tier": 0,
-    "storageType": "Liquid"
+    "storageType": "Liquid",
+    "isMined": true
   },
   "ore": {
     "id": "ore",
@@ -77,7 +81,8 @@
     "batchSize": 0,
     "inputs": [],
     "tier": 0,
-    "storageType": "Solid"
+    "storageType": "Solid",
+    "isMined": true
   },
   "rawscrap": {
     "id": "rawscrap",
@@ -93,7 +98,8 @@
     "batchSize": 0,
     "inputs": [],
     "tier": 0,
-    "storageType": "Solid"
+    "storageType": "Solid",
+    "isMined": true
   },
   "silicon": {
     "id": "silicon",
@@ -109,7 +115,8 @@
     "batchSize": 0,
     "inputs": [],
     "tier": 0,
-    "storageType": "Solid"
+    "storageType": "Solid",
+    "isMined": true
   },
   "antimattercells": {
     "id": "antimattercells",
@@ -134,7 +141,8 @@
       }
     ],
     "tier": 1,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "computronicsubstrate": {
     "id": "computronicsubstrate",
@@ -167,7 +175,8 @@
       }
     ],
     "tier": 1,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "graphene": {
     "id": "graphene",
@@ -192,7 +201,8 @@
       }
     ],
     "tier": 1,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "metallicmicrolattice": {
     "id": "metallicmicrolattice",
@@ -221,7 +231,8 @@
       }
     ],
     "tier": 1,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "proteinpaste": {
     "id": "proteinpaste",
@@ -250,7 +261,8 @@
       }
     ],
     "tier": 1,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "refinedmetals": {
     "id": "refinedmetals",
@@ -275,7 +287,8 @@
       }
     ],
     "tier": 1,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "scrapmetal": {
     "id": "scrapmetal",
@@ -300,7 +313,8 @@
       }
     ],
     "tier": 1,
-    "storageType": "Solid"
+    "storageType": "Solid",
+    "isMined": false
   },
   "siliconwafers": {
     "id": "siliconwafers",
@@ -325,7 +339,8 @@
       }
     ],
     "tier": 1,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "stimulants": {
     "id": "stimulants",
@@ -354,7 +369,8 @@
       }
     ],
     "tier": 1,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "superfluidcoolant": {
     "id": "superfluidcoolant",
@@ -379,7 +395,8 @@
       }
     ],
     "tier": 1,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "teladianium": {
     "id": "teladianium",
@@ -404,7 +421,8 @@
       }
     ],
     "tier": 1,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "water": {
     "id": "water",
@@ -429,7 +447,8 @@
       }
     ],
     "tier": 1,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "advancedcomposites": {
     "id": "advancedcomposites",
@@ -458,7 +477,8 @@
       }
     ],
     "tier": 2,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "bogas": {
     "id": "bogas",
@@ -483,7 +503,8 @@
       }
     ],
     "tier": 2,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "cheltmeat": {
     "id": "cheltmeat",
@@ -508,7 +529,8 @@
       }
     ],
     "tier": 2,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "engineparts": {
     "id": "engineparts",
@@ -537,7 +559,8 @@
       }
     ],
     "tier": 2,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "hullparts": {
     "id": "hullparts",
@@ -566,7 +589,8 @@
       }
     ],
     "tier": 2,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "majasnails": {
     "id": "majasnails",
@@ -591,7 +615,8 @@
       }
     ],
     "tier": 2,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "meat": {
     "id": "meat",
@@ -616,7 +641,8 @@
       }
     ],
     "tier": 2,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "microchips": {
     "id": "microchips",
@@ -641,7 +667,8 @@
       }
     ],
     "tier": 2,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "plankton": {
     "id": "plankton",
@@ -666,7 +693,8 @@
       }
     ],
     "tier": 2,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "plasmaconductors": {
     "id": "plasmaconductors",
@@ -695,7 +723,8 @@
       }
     ],
     "tier": 2,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "quantumtubes": {
     "id": "quantumtubes",
@@ -724,7 +753,8 @@
       }
     ],
     "tier": 2,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "scanningarrays": {
     "id": "scanningarrays",
@@ -753,7 +783,8 @@
       }
     ],
     "tier": 2,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "scruffinfruit": {
     "id": "scruffinfruit",
@@ -778,7 +809,8 @@
       }
     ],
     "tier": 2,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "siliconcarbide": {
     "id": "siliconcarbide",
@@ -811,7 +843,8 @@
       }
     ],
     "tier": 2,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "smartchips": {
     "id": "smartchips",
@@ -836,7 +869,8 @@
       }
     ],
     "tier": 2,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "sojabeans": {
     "id": "sojabeans",
@@ -861,7 +895,8 @@
       }
     ],
     "tier": 2,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "spices": {
     "id": "spices",
@@ -886,7 +921,8 @@
       }
     ],
     "tier": 2,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "sunriseflowers": {
     "id": "sunriseflowers",
@@ -911,7 +947,8 @@
       }
     ],
     "tier": 2,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "swampplant": {
     "id": "swampplant",
@@ -936,7 +973,8 @@
       }
     ],
     "tier": 2,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "terranmre": {
     "id": "terranmre",
@@ -961,7 +999,8 @@
       }
     ],
     "tier": 2,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "wheat": {
     "id": "wheat",
@@ -986,7 +1025,8 @@
       }
     ],
     "tier": 2,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "advancedelectronics": {
     "id": "advancedelectronics",
@@ -1015,7 +1055,8 @@
       }
     ],
     "tier": 3,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "antimatterconverters": {
     "id": "antimatterconverters",
@@ -1044,7 +1085,8 @@
       }
     ],
     "tier": 3,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "bofu": {
     "id": "bofu",
@@ -1073,7 +1115,8 @@
       }
     ],
     "tier": 3,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "claytronics": {
     "id": "claytronics",
@@ -1106,7 +1149,8 @@
       }
     ],
     "tier": 3,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "dronecomponents": {
     "id": "dronecomponents",
@@ -1143,7 +1187,8 @@
       }
     ],
     "tier": 3,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "fieldcoils": {
     "id": "fieldcoils",
@@ -1172,7 +1217,8 @@
       }
     ],
     "tier": 3,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "foodrations": {
     "id": "foodrations",
@@ -1205,7 +1251,8 @@
       }
     ],
     "tier": 3,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "majadust": {
     "id": "majadust",
@@ -1234,7 +1281,8 @@
       }
     ],
     "tier": 3,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "medicalsupplies": {
     "id": "medicalsupplies",
@@ -1267,7 +1315,8 @@
       }
     ],
     "tier": 3,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "missilecomponents": {
     "id": "missilecomponents",
@@ -1296,7 +1345,8 @@
       }
     ],
     "tier": 3,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "nostropoil": {
     "id": "nostropoil",
@@ -1329,7 +1379,8 @@
       }
     ],
     "tier": 3,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "shieldcomponents": {
     "id": "shieldcomponents",
@@ -1358,7 +1409,8 @@
       }
     ],
     "tier": 3,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "sojahusk": {
     "id": "sojahusk",
@@ -1391,7 +1443,8 @@
       }
     ],
     "tier": 3,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "spacefuel": {
     "id": "spacefuel",
@@ -1420,7 +1473,8 @@
       }
     ],
     "tier": 3,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "spaceweed": {
     "id": "spaceweed",
@@ -1449,7 +1503,8 @@
       }
     ],
     "tier": 3,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "turretcomponents": {
     "id": "turretcomponents",
@@ -1482,7 +1537,8 @@
       }
     ],
     "tier": 3,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "weaponscomponents": {
     "id": "weaponscomponents",
@@ -1511,7 +1567,8 @@
       }
     ],
     "tier": 3,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   },
   "energycells": {
     "id": "energycells",
@@ -1527,6 +1584,7 @@
     "batchSize": 0,
     "inputs": [],
     "tier": 0,
-    "storageType": "Container"
+    "storageType": "Container",
+    "isMined": false
   }
 }
