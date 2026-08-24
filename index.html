@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>X4 Factories Planner</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNyIgZmlsbD0iIzBiMGYxNCIvPjxwYXRoIGQ9Ik04IDIyIEwxNiAxMCBMMjQgMjIiIHN0cm9rZT0iIzNmZDBlMCIgc3Ryb2tlLXdpZHRoPSIyIiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48Y2lyY2xlIGN4PSI4IiBjeT0iMjIiIHI9IjMiIGZpbGw9IiM0ZmIyN2EiLz48Y2lyY2xlIGN4PSIxNiIgY3k9IjEwIiByPSIzIiBmaWxsPSIjM2ZkMGUwIi8+PGNpcmNsZSBjeD0iMjQiIGN5PSIyMiIgcj0iMyIgZmlsbD0iI2UwNjczZiIvPjwvc3ZnPg==">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=8">
+</head>
+<body>
+<div id="app">
+
+  <header id="topbar">
+    <h1>X4 <span>Factories Planner</span></h1>
+    <div id="target-controls">
+      <label for="target-rate">Target output</label>
+      <input type="number" id="target-rate" min="1" step="1" value="100">
+      <span>units / hour</span>
+      <button id="target-1module">1 module</button>
+    </div>
+  </header>
+
+  <div id="layout">
+
+    <aside id="sidebar">
+      <input type="text" id="search" placeholder="Search wares...">
+      <div id="ware-list"></div>
+    </aside>
+
+    <main id="chain-view">
+      <div id="empty-state">
+        <p>Select a ware from the list to see its full production chain.</p>
+      </div>
+      <div id="chain-scroll">
+        <svg id="chain-lines"></svg>
+        <div id="chain-columns"></div>
+      </div>
+    </main>
+
+    <aside id="details" class="hidden">
+      <button id="details-close" aria-label="Close details" title="Close">
+        <svg viewBox="0 0 12 12" width="14" height="14" fill="none"><path d="M2.5 2.5L9.5 9.5M9.5 2.5L2.5 9.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+      <div id="details-content"></div>
+    </aside>
+
+  </div>
+
+  <footer id="factories-drawer" class="collapsed">
+    <div id="factories-header">
+      <button id="factories-toggle">
+        <span>My Factories <span id="built-count">(0)</span></span>
+        <span class="drawer-hint">saved in this browser</span>
+        <span class="chevron"><svg viewBox="0 0 10 10" width="10" height="10" fill="none"><path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      </button>
+      <button id="clear-data" title="Clear all saved module counts">Clear all data</button>
+    </div>
+    <div id="factories-drawer-body">
+      <div class="drawer-col" id="built-col">
+        <div class="drawer-col-title">Modules I've built</div>
+        <div id="built-list" class="chip-list">
+          <div class="drawer-empty">Enter module counts in the left list to add them here.</div>
+        </div>
+      </div>
+      <div class="drawer-col" id="bottleneck-col">
+        <div class="drawer-col-title">Bottlenecks <span class="drawer-subtitle">demand exceeding what you produce</span></div>
+        <div id="bottleneck-list"></div>
+      </div>
+      <div class="drawer-col" id="suggest-col">
+        <div class="drawer-col-title">Suggested next build <span class="drawer-subtitle">ranked by fewest resources you don't produce yet</span></div>
+        <div id="suggest-list"></div>
+      </div>
+    </div>
+  </footer>
+
+</div>
+
+<script src="data/wares.js?v=8"></script>
+<script src="app.js?v=8"></script>
+</body>
+</html>

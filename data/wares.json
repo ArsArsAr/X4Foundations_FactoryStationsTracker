@@ -1,0 +1,1532 @@
+{
+  "helium": {
+    "id": "helium",
+    "label": "Helium",
+    "category": "Gases",
+    "price": {
+      "min": 37,
+      "avg": 44,
+      "max": 51
+    },
+    "volume": 6,
+    "cycleTime": 0,
+    "batchSize": 0,
+    "inputs": [],
+    "tier": 0,
+    "storageType": "Liquid"
+  },
+  "hydrogen": {
+    "id": "hydrogen",
+    "label": "Hydrogen",
+    "category": "Gases",
+    "price": {
+      "min": 49,
+      "avg": 58,
+      "max": 67
+    },
+    "volume": 6,
+    "cycleTime": 0,
+    "batchSize": 0,
+    "inputs": [],
+    "tier": 0,
+    "storageType": "Liquid"
+  },
+  "ice": {
+    "id": "ice",
+    "label": "Ice",
+    "category": "Ice",
+    "price": {
+      "min": 26,
+      "avg": 30,
+      "max": 35
+    },
+    "volume": 8,
+    "cycleTime": 0,
+    "batchSize": 0,
+    "inputs": [],
+    "tier": 0,
+    "storageType": "Solid"
+  },
+  "methane": {
+    "id": "methane",
+    "label": "Methane",
+    "category": "Gases",
+    "price": {
+      "min": 41,
+      "avg": 48,
+      "max": 55
+    },
+    "volume": 6,
+    "cycleTime": 0,
+    "batchSize": 0,
+    "inputs": [],
+    "tier": 0,
+    "storageType": "Liquid"
+  },
+  "ore": {
+    "id": "ore",
+    "label": "Ore",
+    "category": "Minerals",
+    "price": {
+      "min": 43,
+      "avg": 50,
+      "max": 58
+    },
+    "volume": 10,
+    "cycleTime": 0,
+    "batchSize": 0,
+    "inputs": [],
+    "tier": 0,
+    "storageType": "Solid"
+  },
+  "rawscrap": {
+    "id": "rawscrap",
+    "label": "Raw Scrap",
+    "category": "Refined",
+    "price": {
+      "min": 153,
+      "avg": 180,
+      "max": 207
+    },
+    "volume": 10,
+    "cycleTime": 0,
+    "batchSize": 0,
+    "inputs": [],
+    "tier": 0,
+    "storageType": "Solid"
+  },
+  "silicon": {
+    "id": "silicon",
+    "label": "Silicon",
+    "category": "Minerals",
+    "price": {
+      "min": 111,
+      "avg": 130,
+      "max": 150
+    },
+    "volume": 10,
+    "cycleTime": 0,
+    "batchSize": 0,
+    "inputs": [],
+    "tier": 0,
+    "storageType": "Solid"
+  },
+  "antimattercells": {
+    "id": "antimattercells",
+    "label": "Antimatter Cells",
+    "category": "Refined",
+    "price": {
+      "min": 121,
+      "avg": 202,
+      "max": 282
+    },
+    "volume": 18,
+    "cycleTime": 120,
+    "batchSize": 99,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 100
+      },
+      {
+        "wareID": "hydrogen",
+        "amount": 320
+      }
+    ],
+    "tier": 1,
+    "storageType": "Container"
+  },
+  "computronicsubstrate": {
+    "id": "computronicsubstrate",
+    "label": "Computronic Substrate",
+    "category": "Hightech",
+    "price": {
+      "min": 7452,
+      "avg": 8280,
+      "max": 9108
+    },
+    "volume": 50,
+    "cycleTime": 600,
+    "batchSize": 98,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 4000
+      },
+      {
+        "wareID": "hydrogen",
+        "amount": 2000
+      },
+      {
+        "wareID": "ore",
+        "amount": 3000
+      },
+      {
+        "wareID": "silicon",
+        "amount": 3000
+      }
+    ],
+    "tier": 1,
+    "storageType": "Container"
+  },
+  "graphene": {
+    "id": "graphene",
+    "label": "Graphene",
+    "category": "Refined",
+    "price": {
+      "min": 100,
+      "avg": 166,
+      "max": 233
+    },
+    "volume": 20,
+    "cycleTime": 240,
+    "batchSize": 96,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 80
+      },
+      {
+        "wareID": "methane",
+        "amount": 320
+      }
+    ],
+    "tier": 1,
+    "storageType": "Container"
+  },
+  "metallicmicrolattice": {
+    "id": "metallicmicrolattice",
+    "label": "Metallic Microlattice",
+    "category": "Hightech",
+    "price": {
+      "min": 42,
+      "avg": 50,
+      "max": 57
+    },
+    "volume": 1,
+    "cycleTime": 180,
+    "batchSize": 190,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 50
+      },
+      {
+        "wareID": "helium",
+        "amount": 130
+      },
+      {
+        "wareID": "ore",
+        "amount": 50
+      }
+    ],
+    "tier": 1,
+    "storageType": "Container"
+  },
+  "proteinpaste": {
+    "id": "proteinpaste",
+    "label": "Protein Paste",
+    "category": "Agricultural",
+    "price": {
+      "min": 57,
+      "avg": 96,
+      "max": 134
+    },
+    "volume": 4,
+    "cycleTime": 300,
+    "batchSize": 219,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 80
+      },
+      {
+        "wareID": "ice",
+        "amount": 80
+      },
+      {
+        "wareID": "methane",
+        "amount": 200
+      }
+    ],
+    "tier": 1,
+    "storageType": "Container"
+  },
+  "refinedmetals": {
+    "id": "refinedmetals",
+    "label": "Refined Metals",
+    "category": "Refined",
+    "price": {
+      "min": 89,
+      "avg": 148,
+      "max": 207
+    },
+    "volume": 14,
+    "cycleTime": 150,
+    "batchSize": 88,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 90
+      },
+      {
+        "wareID": "ore",
+        "amount": 240
+      }
+    ],
+    "tier": 1,
+    "storageType": "Container"
+  },
+  "scrapmetal": {
+    "id": "scrapmetal",
+    "label": "Scrap Metal",
+    "category": "Refined",
+    "price": {
+      "min": 318,
+      "avg": 375,
+      "max": 431
+    },
+    "volume": 10,
+    "cycleTime": 60,
+    "batchSize": 1,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 10
+      },
+      {
+        "wareID": "rawscrap",
+        "amount": 1
+      }
+    ],
+    "tier": 1,
+    "storageType": "Solid"
+  },
+  "siliconwafers": {
+    "id": "siliconwafers",
+    "label": "Silicon Wafers",
+    "category": "Refined",
+    "price": {
+      "min": 180,
+      "avg": 299,
+      "max": 419
+    },
+    "volume": 18,
+    "cycleTime": 180,
+    "batchSize": 107,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 90
+      },
+      {
+        "wareID": "silicon",
+        "amount": 240
+      }
+    ],
+    "tier": 1,
+    "storageType": "Container"
+  },
+  "stimulants": {
+    "id": "stimulants",
+    "label": "Stimulants",
+    "category": "Pharmaceutical",
+    "price": {
+      "min": 153,
+      "avg": 340,
+      "max": 527
+    },
+    "volume": 12,
+    "cycleTime": 300,
+    "batchSize": 98,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 80
+      },
+      {
+        "wareID": "helium",
+        "amount": 400
+      },
+      {
+        "wareID": "silicon",
+        "amount": 20
+      }
+    ],
+    "tier": 1,
+    "storageType": "Container"
+  },
+  "superfluidcoolant": {
+    "id": "superfluidcoolant",
+    "label": "Superfluid Coolant",
+    "category": "Refined",
+    "price": {
+      "min": 90,
+      "avg": 150,
+      "max": 211
+    },
+    "volume": 16,
+    "cycleTime": 240,
+    "batchSize": 95,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 60
+      },
+      {
+        "wareID": "helium",
+        "amount": 320
+      }
+    ],
+    "tier": 1,
+    "storageType": "Container"
+  },
+  "teladianium": {
+    "id": "teladianium",
+    "label": "Teladianium",
+    "category": "Refined",
+    "price": {
+      "min": 121,
+      "avg": 202,
+      "max": 283
+    },
+    "volume": 16,
+    "cycleTime": 120,
+    "batchSize": 70,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 45
+      },
+      {
+        "wareID": "ore",
+        "amount": 280
+      }
+    ],
+    "tier": 1,
+    "storageType": "Container"
+  },
+  "water": {
+    "id": "water",
+    "label": "Water",
+    "category": "Water",
+    "price": {
+      "min": 32,
+      "avg": 53,
+      "max": 74
+    },
+    "volume": 6,
+    "cycleTime": 120,
+    "batchSize": 193,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 60
+      },
+      {
+        "wareID": "ice",
+        "amount": 320
+      }
+    ],
+    "tier": 1,
+    "storageType": "Container"
+  },
+  "advancedcomposites": {
+    "id": "advancedcomposites",
+    "label": "Advanced Composites",
+    "category": "Hightech",
+    "price": {
+      "min": 432,
+      "avg": 540,
+      "max": 648
+    },
+    "volume": 32,
+    "cycleTime": 300,
+    "batchSize": 54,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 50
+      },
+      {
+        "wareID": "graphene",
+        "amount": 80
+      },
+      {
+        "wareID": "refinedmetals",
+        "amount": 80
+      }
+    ],
+    "tier": 2,
+    "storageType": "Container"
+  },
+  "bogas": {
+    "id": "bogas",
+    "label": "BoGas",
+    "category": "Refined",
+    "price": {
+      "min": 44,
+      "avg": 73,
+      "max": 102
+    },
+    "volume": 4,
+    "cycleTime": 150,
+    "batchSize": 110,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 40
+      },
+      {
+        "wareID": "water",
+        "amount": 100
+      }
+    ],
+    "tier": 2,
+    "storageType": "Container"
+  },
+  "cheltmeat": {
+    "id": "cheltmeat",
+    "label": "Chelt Meat",
+    "category": "Agricultural",
+    "price": {
+      "min": 31,
+      "avg": 51,
+      "max": 72
+    },
+    "volume": 7,
+    "cycleTime": 450,
+    "batchSize": 209,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 50
+      },
+      {
+        "wareID": "water",
+        "amount": 120
+      }
+    ],
+    "tier": 2,
+    "storageType": "Container"
+  },
+  "engineparts": {
+    "id": "engineparts",
+    "label": "Engine Parts",
+    "category": "Hightech",
+    "price": {
+      "min": 128,
+      "avg": 182,
+      "max": 237
+    },
+    "volume": 15,
+    "cycleTime": 900,
+    "batchSize": 208,
+    "inputs": [
+      {
+        "wareID": "antimattercells",
+        "amount": 80
+      },
+      {
+        "wareID": "energycells",
+        "amount": 60
+      },
+      {
+        "wareID": "refinedmetals",
+        "amount": 96
+      }
+    ],
+    "tier": 2,
+    "storageType": "Container"
+  },
+  "hullparts": {
+    "id": "hullparts",
+    "label": "Hull Parts",
+    "category": "Hightech",
+    "price": {
+      "min": 146,
+      "avg": 209,
+      "max": 272
+    },
+    "volume": 12,
+    "cycleTime": 900,
+    "batchSize": 294,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 80
+      },
+      {
+        "wareID": "graphene",
+        "amount": 40
+      },
+      {
+        "wareID": "refinedmetals",
+        "amount": 280
+      }
+    ],
+    "tier": 2,
+    "storageType": "Container"
+  },
+  "majasnails": {
+    "id": "majasnails",
+    "label": "Maja Snails",
+    "category": "Agricultural",
+    "price": {
+      "min": 35,
+      "avg": 58,
+      "max": 81
+    },
+    "volume": 6,
+    "cycleTime": 450,
+    "batchSize": 146,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 40
+      },
+      {
+        "wareID": "water",
+        "amount": 100
+      }
+    ],
+    "tier": 2,
+    "storageType": "Container"
+  },
+  "meat": {
+    "id": "meat",
+    "label": "Meat",
+    "category": "Agricultural",
+    "price": {
+      "min": 29,
+      "avg": 48,
+      "max": 68
+    },
+    "volume": 6,
+    "cycleTime": 450,
+    "batchSize": 290,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 80
+      },
+      {
+        "wareID": "water",
+        "amount": 100
+      }
+    ],
+    "tier": 2,
+    "storageType": "Container"
+  },
+  "microchips": {
+    "id": "microchips",
+    "label": "Microchips",
+    "category": "Hightech",
+    "price": {
+      "min": 805,
+      "avg": 948,
+      "max": 1090
+    },
+    "volume": 22,
+    "cycleTime": 600,
+    "batchSize": 72,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 50
+      },
+      {
+        "wareID": "siliconwafers",
+        "amount": 200
+      }
+    ],
+    "tier": 2,
+    "storageType": "Container"
+  },
+  "plankton": {
+    "id": "plankton",
+    "label": "Plankton",
+    "category": "Agricultural",
+    "price": {
+      "min": 11,
+      "avg": 18,
+      "max": 25
+    },
+    "volume": 1,
+    "cycleTime": 400,
+    "batchSize": 275,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 20
+      },
+      {
+        "wareID": "water",
+        "amount": 50
+      }
+    ],
+    "tier": 2,
+    "storageType": "Container"
+  },
+  "plasmaconductors": {
+    "id": "plasmaconductors",
+    "label": "Plasma Conductors",
+    "category": "Hightech",
+    "price": {
+      "min": 769,
+      "avg": 1026,
+      "max": 1282
+    },
+    "volume": 32,
+    "cycleTime": 900,
+    "batchSize": 44,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 60
+      },
+      {
+        "wareID": "graphene",
+        "amount": 96
+      },
+      {
+        "wareID": "superfluidcoolant",
+        "amount": 140
+      }
+    ],
+    "tier": 2,
+    "storageType": "Container"
+  },
+  "quantumtubes": {
+    "id": "quantumtubes",
+    "label": "Quantum Tubes",
+    "category": "Hightech",
+    "price": {
+      "min": 225,
+      "avg": 300,
+      "max": 375
+    },
+    "volume": 22,
+    "cycleTime": 720,
+    "batchSize": 94,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 40
+      },
+      {
+        "wareID": "graphene",
+        "amount": 116
+      },
+      {
+        "wareID": "superfluidcoolant",
+        "amount": 30
+      }
+    ],
+    "tier": 2,
+    "storageType": "Container"
+  },
+  "scanningarrays": {
+    "id": "scanningarrays",
+    "label": "Scanning Arrays",
+    "category": "Hightech",
+    "price": {
+      "min": 842,
+      "avg": 1053,
+      "max": 1264
+    },
+    "volume": 38,
+    "cycleTime": 600,
+    "batchSize": 36,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 60
+      },
+      {
+        "wareID": "refinedmetals",
+        "amount": 100
+      },
+      {
+        "wareID": "siliconwafers",
+        "amount": 60
+      }
+    ],
+    "tier": 2,
+    "storageType": "Container"
+  },
+  "scruffinfruit": {
+    "id": "scruffinfruit",
+    "label": "Scruffin Fruit",
+    "category": "Agricultural",
+    "price": {
+      "min": 17,
+      "avg": 28,
+      "max": 40
+    },
+    "volume": 6,
+    "cycleTime": 300,
+    "batchSize": 255,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 30
+      },
+      {
+        "wareID": "water",
+        "amount": 80
+      }
+    ],
+    "tier": 2,
+    "storageType": "Container"
+  },
+  "siliconcarbide": {
+    "id": "siliconcarbide",
+    "label": "Silicon Carbide",
+    "category": "Hightech",
+    "price": {
+      "min": 1202,
+      "avg": 1414,
+      "max": 1627
+    },
+    "volume": 20,
+    "cycleTime": 300,
+    "batchSize": 48,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 200
+      },
+      {
+        "wareID": "metallicmicrolattice",
+        "amount": 2
+      },
+      {
+        "wareID": "methane",
+        "amount": 400
+      },
+      {
+        "wareID": "silicon",
+        "amount": 300
+      }
+    ],
+    "tier": 2,
+    "storageType": "Container"
+  },
+  "smartchips": {
+    "id": "smartchips",
+    "label": "Smart Chips",
+    "category": "Shiptech",
+    "price": {
+      "min": 46,
+      "avg": 57,
+      "max": 69
+    },
+    "volume": 2,
+    "cycleTime": 600,
+    "batchSize": 143,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 50
+      },
+      {
+        "wareID": "siliconwafers",
+        "amount": 20
+      }
+    ],
+    "tier": 2,
+    "storageType": "Container"
+  },
+  "sojabeans": {
+    "id": "sojabeans",
+    "label": "Soja Beans",
+    "category": "Agricultural",
+    "price": {
+      "min": 40,
+      "avg": 67,
+      "max": 93
+    },
+    "volume": 5,
+    "cycleTime": 300,
+    "batchSize": 104,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 30
+      },
+      {
+        "wareID": "water",
+        "amount": 80
+      }
+    ],
+    "tier": 2,
+    "storageType": "Container"
+  },
+  "spices": {
+    "id": "spices",
+    "label": "Spices",
+    "category": "Agricultural",
+    "price": {
+      "min": 12,
+      "avg": 20,
+      "max": 28
+    },
+    "volume": 3,
+    "cycleTime": 600,
+    "batchSize": 500,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 40
+      },
+      {
+        "wareID": "water",
+        "amount": 80
+      }
+    ],
+    "tier": 2,
+    "storageType": "Container"
+  },
+  "sunriseflowers": {
+    "id": "sunriseflowers",
+    "label": "Sunrise Flowers",
+    "category": "Agricultural",
+    "price": {
+      "min": 48,
+      "avg": 80,
+      "max": 112
+    },
+    "volume": 5,
+    "cycleTime": 300,
+    "batchSize": 100,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 30
+      },
+      {
+        "wareID": "water",
+        "amount": 80
+      }
+    ],
+    "tier": 2,
+    "storageType": "Container"
+  },
+  "swampplant": {
+    "id": "swampplant",
+    "label": "Swamp Plant",
+    "category": "Agricultural",
+    "price": {
+      "min": 50,
+      "avg": 84,
+      "max": 117
+    },
+    "volume": 6,
+    "cycleTime": 450,
+    "batchSize": 120,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 40
+      },
+      {
+        "wareID": "water",
+        "amount": 100
+      }
+    ],
+    "tier": 2,
+    "storageType": "Container"
+  },
+  "terranmre": {
+    "id": "terranmre",
+    "label": "Terran MRE",
+    "category": "Food",
+    "price": {
+      "min": 32,
+      "avg": 54,
+      "max": 75
+    },
+    "volume": 2,
+    "cycleTime": 240,
+    "batchSize": 175,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 60
+      },
+      {
+        "wareID": "proteinpaste",
+        "amount": 60
+      }
+    ],
+    "tier": 2,
+    "storageType": "Container"
+  },
+  "wheat": {
+    "id": "wheat",
+    "label": "Wheat",
+    "category": "Agricultural",
+    "price": {
+      "min": 19,
+      "avg": 31,
+      "max": 44
+    },
+    "volume": 4,
+    "cycleTime": 300,
+    "batchSize": 310,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 60
+      },
+      {
+        "wareID": "water",
+        "amount": 80
+      }
+    ],
+    "tier": 2,
+    "storageType": "Container"
+  },
+  "advancedelectronics": {
+    "id": "advancedelectronics",
+    "label": "Advanced Electronics",
+    "category": "Shiptech",
+    "price": {
+      "min": 710,
+      "avg": 1014,
+      "max": 1318
+    },
+    "volume": 30,
+    "cycleTime": 720,
+    "batchSize": 54,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 60
+      },
+      {
+        "wareID": "microchips",
+        "amount": 44
+      },
+      {
+        "wareID": "quantumtubes",
+        "amount": 20
+      }
+    ],
+    "tier": 3,
+    "storageType": "Container"
+  },
+  "antimatterconverters": {
+    "id": "antimatterconverters",
+    "label": "Antimatter Converters",
+    "category": "Shiptech",
+    "price": {
+      "min": 248,
+      "avg": 354,
+      "max": 461
+    },
+    "volume": 10,
+    "cycleTime": 300,
+    "batchSize": 133,
+    "inputs": [
+      {
+        "wareID": "advancedcomposites",
+        "amount": 20
+      },
+      {
+        "wareID": "energycells",
+        "amount": 80
+      },
+      {
+        "wareID": "microchips",
+        "amount": 30
+      }
+    ],
+    "tier": 3,
+    "storageType": "Container"
+  },
+  "bofu": {
+    "id": "bofu",
+    "label": "BoFu",
+    "category": "Food",
+    "price": {
+      "min": 61,
+      "avg": 101,
+      "max": 142
+    },
+    "volume": 4,
+    "cycleTime": 240,
+    "batchSize": 82,
+    "inputs": [
+      {
+        "wareID": "bogas",
+        "amount": 40
+      },
+      {
+        "wareID": "energycells",
+        "amount": 40
+      },
+      {
+        "wareID": "plankton",
+        "amount": 120
+      }
+    ],
+    "tier": 3,
+    "storageType": "Container"
+  },
+  "claytronics": {
+    "id": "claytronics",
+    "label": "Claytronics",
+    "category": "Shiptech",
+    "price": {
+      "min": 1734,
+      "avg": 2040,
+      "max": 2346
+    },
+    "volume": 24,
+    "cycleTime": 900,
+    "batchSize": 108,
+    "inputs": [
+      {
+        "wareID": "antimattercells",
+        "amount": 100
+      },
+      {
+        "wareID": "energycells",
+        "amount": 140
+      },
+      {
+        "wareID": "microchips",
+        "amount": 160
+      },
+      {
+        "wareID": "quantumtubes",
+        "amount": 100
+      }
+    ],
+    "tier": 3,
+    "storageType": "Container"
+  },
+  "dronecomponents": {
+    "id": "dronecomponents",
+    "label": "Drone Components",
+    "category": "Shiptech",
+    "price": {
+      "min": 685,
+      "avg": 914,
+      "max": 1142
+    },
+    "volume": 30,
+    "cycleTime": 1200,
+    "batchSize": 105,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 60
+      },
+      {
+        "wareID": "engineparts",
+        "amount": 20
+      },
+      {
+        "wareID": "hullparts",
+        "amount": 20
+      },
+      {
+        "wareID": "microchips",
+        "amount": 20
+      },
+      {
+        "wareID": "scanningarrays",
+        "amount": 40
+      }
+    ],
+    "tier": 3,
+    "storageType": "Container"
+  },
+  "fieldcoils": {
+    "id": "fieldcoils",
+    "label": "Field Coils",
+    "category": "Shiptech",
+    "price": {
+      "min": 247,
+      "avg": 412,
+      "max": 576
+    },
+    "volume": 15,
+    "cycleTime": 600,
+    "batchSize": 175,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 60
+      },
+      {
+        "wareID": "plasmaconductors",
+        "amount": 40
+      },
+      {
+        "wareID": "quantumtubes",
+        "amount": 43
+      }
+    ],
+    "tier": 3,
+    "storageType": "Container"
+  },
+  "foodrations": {
+    "id": "foodrations",
+    "label": "Food Rations",
+    "category": "Food",
+    "price": {
+      "min": 12,
+      "avg": 21,
+      "max": 29
+    },
+    "volume": 1,
+    "cycleTime": 240,
+    "batchSize": 460,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 100
+      },
+      {
+        "wareID": "meat",
+        "amount": 40
+      },
+      {
+        "wareID": "spices",
+        "amount": 40
+      },
+      {
+        "wareID": "wheat",
+        "amount": 40
+      }
+    ],
+    "tier": 3,
+    "storageType": "Container"
+  },
+  "majadust": {
+    "id": "majadust",
+    "label": "Maja Dust",
+    "category": "Pharmaceutical",
+    "price": {
+      "min": 94,
+      "avg": 208,
+      "max": 323
+    },
+    "volume": 6,
+    "cycleTime": 600,
+    "batchSize": 64,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 40
+      },
+      {
+        "wareID": "majasnails",
+        "amount": 120
+      },
+      {
+        "wareID": "spices",
+        "amount": 60
+      }
+    ],
+    "tier": 3,
+    "storageType": "Container"
+  },
+  "medicalsupplies": {
+    "id": "medicalsupplies",
+    "label": "Medical Supplies",
+    "category": "Pharmaceutical",
+    "price": {
+      "min": 43,
+      "avg": 66,
+      "max": 89
+    },
+    "volume": 2,
+    "cycleTime": 300,
+    "batchSize": 208,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 100
+      },
+      {
+        "wareID": "spices",
+        "amount": 40
+      },
+      {
+        "wareID": "water",
+        "amount": 60
+      },
+      {
+        "wareID": "wheat",
+        "amount": 30
+      }
+    ],
+    "tier": 3,
+    "storageType": "Container"
+  },
+  "missilecomponents": {
+    "id": "missilecomponents",
+    "label": "Missile Components",
+    "category": "Shiptech",
+    "price": {
+      "min": 6,
+      "avg": 9,
+      "max": 13
+    },
+    "volume": 1,
+    "cycleTime": 900,
+    "batchSize": 281,
+    "inputs": [
+      {
+        "wareID": "advancedcomposites",
+        "amount": 2
+      },
+      {
+        "wareID": "energycells",
+        "amount": 20
+      },
+      {
+        "wareID": "hullparts",
+        "amount": 2
+      }
+    ],
+    "tier": 3,
+    "storageType": "Container"
+  },
+  "nostropoil": {
+    "id": "nostropoil",
+    "label": "Nostrop Oil",
+    "category": "Food",
+    "price": {
+      "min": 20,
+      "avg": 34,
+      "max": 47
+    },
+    "volume": 1,
+    "cycleTime": 300,
+    "batchSize": 500,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 100
+      },
+      {
+        "wareID": "spices",
+        "amount": 40
+      },
+      {
+        "wareID": "sunriseflowers",
+        "amount": 40
+      },
+      {
+        "wareID": "water",
+        "amount": 60
+      }
+    ],
+    "tier": 3,
+    "storageType": "Container"
+  },
+  "shieldcomponents": {
+    "id": "shieldcomponents",
+    "label": "Shield Components",
+    "category": "Shiptech",
+    "price": {
+      "min": 113,
+      "avg": 188,
+      "max": 264
+    },
+    "volume": 10,
+    "cycleTime": 1200,
+    "batchSize": 193,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 70
+      },
+      {
+        "wareID": "plasmaconductors",
+        "amount": 20
+      },
+      {
+        "wareID": "quantumtubes",
+        "amount": 20
+      }
+    ],
+    "tier": 3,
+    "storageType": "Container"
+  },
+  "sojahusk": {
+    "id": "sojahusk",
+    "label": "Soja Husk",
+    "category": "Food",
+    "price": {
+      "min": 19,
+      "avg": 32,
+      "max": 45
+    },
+    "volume": 1,
+    "cycleTime": 300,
+    "batchSize": 350,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 80
+      },
+      {
+        "wareID": "majasnails",
+        "amount": 50
+      },
+      {
+        "wareID": "sojabeans",
+        "amount": 40
+      },
+      {
+        "wareID": "spices",
+        "amount": 20
+      }
+    ],
+    "tier": 3,
+    "storageType": "Container"
+  },
+  "spacefuel": {
+    "id": "spacefuel",
+    "label": "Spacefuel",
+    "category": "Pharmaceutical",
+    "price": {
+      "min": 60,
+      "avg": 133,
+      "max": 207
+    },
+    "volume": 2,
+    "cycleTime": 480,
+    "batchSize": 98,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 40
+      },
+      {
+        "wareID": "water",
+        "amount": 100
+      },
+      {
+        "wareID": "wheat",
+        "amount": 80
+      }
+    ],
+    "tier": 3,
+    "storageType": "Container"
+  },
+  "spaceweed": {
+    "id": "spaceweed",
+    "label": "Spaceweed",
+    "category": "Pharmaceutical",
+    "price": {
+      "min": 75,
+      "avg": 166,
+      "max": 257
+    },
+    "volume": 3,
+    "cycleTime": 600,
+    "batchSize": 183,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 140
+      },
+      {
+        "wareID": "spices",
+        "amount": 40
+      },
+      {
+        "wareID": "swampplant",
+        "amount": 120
+      }
+    ],
+    "tier": 3,
+    "storageType": "Container"
+  },
+  "turretcomponents": {
+    "id": "turretcomponents",
+    "label": "Turret Components",
+    "category": "Shiptech",
+    "price": {
+      "min": 164,
+      "avg": 273,
+      "max": 383
+    },
+    "volume": 20,
+    "cycleTime": 1800,
+    "batchSize": 170,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 60
+      },
+      {
+        "wareID": "microchips",
+        "amount": 20
+      },
+      {
+        "wareID": "quantumtubes",
+        "amount": 20
+      },
+      {
+        "wareID": "scanningarrays",
+        "amount": 10
+      }
+    ],
+    "tier": 3,
+    "storageType": "Container"
+  },
+  "weaponscomponents": {
+    "id": "weaponscomponents",
+    "label": "Weapon Components",
+    "category": "Shiptech",
+    "price": {
+      "min": 171,
+      "avg": 285,
+      "max": 399
+    },
+    "volume": 20,
+    "cycleTime": 1800,
+    "batchSize": 170,
+    "inputs": [
+      {
+        "wareID": "energycells",
+        "amount": 60
+      },
+      {
+        "wareID": "hullparts",
+        "amount": 20
+      },
+      {
+        "wareID": "plasmaconductors",
+        "amount": 30
+      }
+    ],
+    "tier": 3,
+    "storageType": "Container"
+  },
+  "energycells": {
+    "id": "energycells",
+    "label": "Energy Cells",
+    "category": "Energy",
+    "price": {
+      "min": 10,
+      "avg": 16,
+      "max": 22
+    },
+    "volume": 1,
+    "cycleTime": 0,
+    "batchSize": 0,
+    "inputs": [],
+    "tier": 0,
+    "storageType": "Container"
+  }
+}

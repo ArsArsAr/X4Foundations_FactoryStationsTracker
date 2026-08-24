@@ -1,0 +1,5 @@
+# Personal/local tool config — has machine-specific paths, not meant to be shared
+.claude/settings.local.json
+
+# Local design-tool state and cache (impeccable skill)
+.impeccable/
