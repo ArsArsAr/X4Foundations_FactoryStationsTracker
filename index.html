@@ -3,82 +3,113 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="Production chain planner for X4: Foundations. See what a ware needs, track what you have built, find shortfalls.">
 <title>X4 Factories Planner</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNyIgZmlsbD0iIzBiMGYxNCIvPjxwYXRoIGQ9Ik04IDIyIEwxNiAxMCBMMjQgMjIiIHN0cm9rZT0iIzNmZDBlMCIgc3Ryb2tlLXdpZHRoPSIyIiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48Y2lyY2xlIGN4PSI4IiBjeT0iMjIiIHI9IjMiIGZpbGw9IiM0ZmIyN2EiLz48Y2lyY2xlIGN4PSIxNiIgY3k9IjEwIiByPSIzIiBmaWxsPSIjM2ZkMGUwIi8+PGNpcmNsZSBjeD0iMjQiIGN5PSIyMiIgcj0iMyIgZmlsbD0iI2UwNjczZiIvPjwvc3ZnPg==">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=11">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23131619'/%3E%3Cpath d='M11 10h5v6h5M11 22h5v-6' fill='none' stroke='%2339414a' stroke-width='2'/%3E%3Crect x='5' y='7' width='7' height='6' rx='1.5' fill='%23a9b1ba'/%3E%3Crect x='5' y='19' width='7' height='6' rx='1.5' fill='%23a9b1ba'/%3E%3Crect x='20' y='12' width='8' height='8' rx='2' fill='%234fcab9'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css?v=15">
 </head>
 <body>
 <div id="app">
 
   <header id="topbar">
-    <h1>X4 <span>Factories Planner</span></h1>
-    <div id="target-controls">
-      <label for="target-rate">Target output</label>
-      <input type="number" id="target-rate" min="1" step="1" value="100">
-      <span>units / hour</span>
-      <button id="target-1module">1 module</button>
+    <div class="brand">
+      <span class="brand-mark">X4</span>
+      <span class="brand-name">Factories Planner</span>
+    </div>
+    <p id="status" role="status" aria-live="polite"></p>
+    <div class="topbar-actions">
+      <button type="button" class="btn" id="export-data" title="Save your built modules to a file"><span data-icon="download-simple"></span>Export</button>
+      <button type="button" class="btn" id="import-data" title="Load built modules from a file"><span data-icon="upload-simple"></span>Import</button>
+      <input type="file" id="import-file" accept="application/json,.json" hidden>
+      <button type="button" class="btn" id="clear-data" title="Clear everything you have marked as built"><span data-icon="arrow-counter-clockwise"></span><span id="clear-data-label">Reset</span></button>
     </div>
   </header>
 
   <div id="layout">
 
-    <aside id="sidebar">
-      <input type="text" id="search" placeholder="Search wares...">
+    <aside id="sidebar" aria-label="Wares">
+      <div class="search-field">
+        <label for="search" class="sr-only">Search wares</label>
+        <span class="search-icon" data-icon="magnifying-glass"></span>
+        <input type="search" id="search" placeholder="Search wares" autocomplete="off" spellcheck="false">
+        <kbd title="Press / to search">/</kbd>
+      </div>
+      <div class="segmented" role="group" aria-label="Show wares">
+        <button type="button" data-filter="all" aria-pressed="true">All <span class="num" id="count-all"></span></button>
+        <button type="button" data-filter="built" aria-pressed="false">Built <span class="num" id="count-built"></span></button>
+      </div>
       <div id="ware-list"></div>
+      <p id="ware-empty" class="quiet-note" hidden></p>
     </aside>
 
     <main id="chain-view">
-      <div id="empty-state">
-        <p>Select a ware from the list to see its full production chain.</p>
+      <div id="chain-bar" hidden>
+        <div class="chain-heading">
+          <h1 id="chain-name"></h1>
+          <p id="chain-sub"></p>
+        </div>
+        <div class="target" role="group" aria-label="Target output">
+          <span class="target-label">Target</span>
+          <span class="target-modules" id="target-modules-wrap">
+            <span class="stepper">
+              <button type="button" id="target-dec" aria-label="One module less" data-fk="target:dec"><span data-icon="minus"></span></button>
+              <input type="number" id="target-modules" min="0" step="1" inputmode="decimal" aria-label="Target in modules" data-fk="target:modules">
+              <button type="button" id="target-inc" aria-label="One module more" data-fk="target:inc"><span data-icon="plus"></span></button>
+            </span>
+            <span class="target-unit" id="target-modules-unit">modules</span>
+            <span class="target-eq">=</span>
+          </span>
+          <input type="number" class="num-input" id="target-rate" min="1" step="1" inputmode="decimal" aria-label="Target in units per hour" data-fk="target:rate">
+          <span class="target-unit">per hour</span>
+          <button type="button" class="btn" id="target-match" data-fk="target:match" hidden></button>
+        </div>
       </div>
-      <div id="chain-scroll">
-        <svg id="chain-lines"></svg>
-        <div id="chain-columns"></div>
+
+      <div id="chain-canvas">
+        <div id="empty-state">
+          <h1>Pick a ware to plan its production chain</h1>
+          <p>You get every input down to what you mine, sized for the output you want, next to what you have already built.</p>
+          <div class="quick-picks" id="quick-picks" aria-label="Common end products"></div>
+        </div>
+        <div id="chain-scroll" hidden>
+          <svg id="chain-lines" aria-hidden="true"></svg>
+          <div id="chain-columns"></div>
+        </div>
       </div>
     </main>
 
-    <aside id="details" class="hidden">
-      <button id="details-close" aria-label="Close details" title="Close">
-        <svg viewBox="0 0 12 12" width="14" height="14" fill="none"><path d="M2.5 2.5L9.5 9.5M9.5 2.5L2.5 9.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-      </button>
+    <aside id="details" aria-label="Ware details" hidden>
       <div id="details-content"></div>
     </aside>
 
   </div>
 
-  <footer id="factories-drawer" class="collapsed">
-    <div id="factories-header">
-      <button id="factories-toggle">
-        <span>My Factories <span id="built-count">(0)</span></span>
-        <span class="drawer-hint">saved in this browser</span>
-        <span class="chevron"><svg viewBox="0 0 10 10" width="10" height="10" fill="none"><path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-      </button>
-      <button id="clear-data" title="Clear all saved module counts">Clear all data</button>
-    </div>
-    <div id="factories-drawer-body">
-      <div class="drawer-col" id="built-col">
-        <div class="drawer-col-title">Modules I've built</div>
-        <div id="built-list" class="chip-list">
-          <div class="drawer-empty">Enter module counts in the left list to add them here.</div>
-        </div>
-      </div>
-      <div class="drawer-col" id="bottleneck-col">
-        <div class="drawer-col-title">Bottlenecks <span class="drawer-subtitle">demand exceeding what you produce</span></div>
-        <div id="bottleneck-list"></div>
-      </div>
-      <div class="drawer-col" id="suggest-col">
-        <div class="drawer-col-title">Suggested next build <span class="drawer-subtitle">ranked by fewest resources you don't produce yet</span></div>
+  <footer id="network" class="collapsed">
+    <button type="button" id="network-toggle" aria-expanded="false" aria-controls="network-body">
+      <span class="network-title">My network</span>
+      <span id="network-summary"></span>
+      <span class="caret" data-icon="caret-down"></span>
+    </button>
+    <div id="network-body">
+      <section class="net-col" aria-labelledby="net-built-title">
+        <h2 id="net-built-title">Built modules</h2>
+        <div id="built-list"></div>
+      </section>
+      <section class="net-col" aria-labelledby="net-balance-title">
+        <h2 id="net-balance-title">Supply and demand</h2>
+        <div id="balance-list"></div>
+      </section>
+      <section class="net-col" aria-labelledby="net-next-title">
+        <h2 id="net-next-title">Next build</h2>
         <div id="suggest-list"></div>
-      </div>
+      </section>
     </div>
   </footer>
 
 </div>
 
-<script src="data/wares.js?v=11"></script>
-<script src="app.js?v=11"></script>
+<script src="data/wares.js?v=15"></script>
+<script src="app.js?v=15"></script>
 </body>
 </html>

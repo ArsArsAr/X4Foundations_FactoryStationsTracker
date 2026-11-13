@@ -1,58 +1,71 @@
 # X4 Factories Planner
 
-A production-chain planner for **[X4: Foundations](https://www.egosoft.com/games/x4/info_en.html)**. Pick any ware and see its entire production chain unwound down to raw materials, with the module counts and per-hour resource rates you'd actually need to hit a target output — plus a running tracker for what you've already built, where your production is falling short, and what to build next.
+A production-chain planner for **[X4: Foundations](https://www.egosoft.com/games/x4/info_en.html)**. Pick any ware and see its entire production chain unwound down to raw materials, sized for the output you want, next to what you have already built. A network view then tells you where your real production falls short and what to build next.
 
-No install, no account, no server. Clone it, double-click `index.html`, and it's running in your browser.
+No install, no account, no server, no internet needed. Clone it, double-click `index.html`, and it runs in your browser.
 
 > This is a fan-made tool, not affiliated with or endorsed by Egosoft.
 
 ## Why
 
-X4's economy is a real dependency graph — almost everything needs Energy Cells, most mid-tier goods need two or three refined inputs, and it's easy to lose track of what a new factory actually costs to feed once you're a dozen stations deep. This tool does the chain math for you: give it a ware and a target rate, and it tells you exactly how many modules of each upstream good you need, all the way down to what you should be mining.
+X4's economy is a real dependency graph. Almost everything needs Energy Cells, most mid-tier goods need two or three refined inputs, and it is easy to lose track of what a new factory costs to feed once you are a dozen stations deep. This tool does the chain maths for you: give it a ware and a target, and it tells you how many modules of each upstream good you need, all the way down to what you should be mining.
+
+## Three numbers, kept apart
+
+The app deals in three different numbers, and the interface labels each one in words so they do not get mixed up:
+
+| Number | Meaning | Scope |
+|---|---|---|
+| **Target** | The output the open chain is sized for. A what-if. | The open chain only |
+| **Needed** | Modules and hourly rates that target implies for every input | The open chain only |
+| **Built** | What you say you actually have. Saved in your browser. | Your whole network |
 
 ## Features
 
-- **Full production chains** — select any ware and see every input it depends on, tier by tier, down to raw materials, connected as a diagram.
-- **Live rate math** — set a target output (units/hour, or "1 module") and every node in the chain shows the module count and resource rate needed to actually hit it, correctly combining shared inputs (e.g. Energy Cells feeding a dozen different nodes sums to one real total instead of being double-counted).
-- **Track what you've built** — tick a checkbox for a quick "I produce this," or enter an exact module count for precision, either in the sidebar or right on the checkmark badge of any node in the chain diagram. Saved locally in your browser, so it's still there next time you open the app.
-- **Bottleneck detection** — a real supply-vs-demand pass across everything you've entered: for every ware your built modules consume, it compares what your built producers actually make against what your built consumers need, and lists every shortfall, worst first, with how many more modules would close the gap.
-- **Suggested next build** — ranks every ware you *haven't* built by how many resources its full chain still needs that you don't already produce (raw materials included), so you can always see the cheapest next factory to add.
-- **Storage type, prices, cycle times** — every ware card shows its storage class (Solid / Liquid / Container), average price, batch size, and cycle time, sourced from current-patch game data.
+- **Production chains as a diagram.** Every input of a ware, tier by tier, down to raw materials. Columns are ordered so each ware sits near what it feeds, which keeps crossing lines to a minimum.
+- **Target in modules or units per hour.** The two fields stay in sync. Opening a ware you have built sizes the chain for your built modules; **Use my N built** snaps back to that at any time.
+- **Needed versus built on every node.** Each node states how many modules the target needs and how many you have, and flags a shortfall ("2 built, short 2").
+- **Flow on hover.** Hover or focus a node to highlight its connections and see how much flows along each one per hour.
+- **Track what you have built, from anywhere.** Tick a ware in the list for a quick "I produce this" (one module), type an exact count next to it, use the plus on a chain node, or the stepper in the details panel. Mined wares only have a tick, meaning "I have a source".
+- **My network.** Supply and demand per hour across everything you have built, shortfalls first, each with a one-click fix that adds the missing modules. Also lists what to build next, ranked by how few new inputs it needs.
+- **Export and import.** Save your built modules to a JSON file and load them on another machine or browser.
+- **Details panel.** Price range, volume, storage class, cycle time, batch size, inputs per cycle and per hour, and where the ware is used.
 
 ## Getting started
 
 1. Download or clone this repository.
-2. Double-click `index.html`. That's it — it opens in your default browser with no server or build step required.
+2. Double-click `index.html`.
 
 ### Using it
 
-1. **Browse or search** for a ware in the left sidebar, grouped by tier (Base Resources, Tier 1, Tier 2, Tier 3).
-2. **Click a ware's name** to see its full production chain in the main panel. Set a target output rate at the top (or hit **1 module** to size the chain for exactly one production module of that ware).
-3. **Click any node** in the chain to see its full detail panel — price, volume, cycle time, and what it's used to make.
-4. **Mark what you've actually built**: tick the checkbox next to a ware for a quick "I produce this," or type an exact module count if you want precise bottleneck math — from the sidebar, or straight off the green checkmark badge on any node in the chain diagram once it's marked built. Mined materials (Ore, Silicon, Ice, Helium, Hydrogen, Methane, Raw Scrap) get a checkbox only (no quantity — just "I have a source for this"); everything else, including Energy Cells, is a real module with a trackable count.
-5. Open the **My Factories** drawer at the bottom of the page to see:
-   - Everything you've marked as built, as removable chips.
-   - **Bottlenecks** — where your built consumers need more than your built producers make.
-   - **Suggested next build** — the ware that would add the fewest new, not-yet-produced resources to your empire.
-6. Use **Clear all data** in the drawer header if you want to wipe your saved progress and start over.
+1. **Find a ware** in the left list (press `/` to jump to search). Use **Built** to show only what you have marked.
+2. **Click its name** to open its chain. Set the target at the top, in modules or per hour.
+3. **Read a node:** the big number is the hourly rate the target needs, the line below says how many modules that takes and how many you have.
+4. **Hover a node** to see what flows in and out of it. **Click a node** for full details (`Esc` closes them).
+5. **Mark what you have built** with the tick and count in the list, or the plus and count on a node.
+6. **Open My network** at the bottom for supply and demand across everything you have built, and for build suggestions.
+7. **Export** saves your data to a file, **Import** loads it, **Reset** clears it (asks once more before it does).
 
 ## Data & credits
 
-Ware and recipe data (prices, cycle times, batch sizes, production inputs, storage types) was sourced from [Roguey's X4 site](https://roguey.co.uk/x4/wares/), a community-maintained reference kept current with the live game patch. This project's code is an original implementation — it is not a copy or fork of any other X4 planning tool.
+Ware and recipe data (prices, cycle times, batch sizes, production inputs, storage types) was sourced from [Roguey's X4 site](https://roguey.co.uk/x4/wares/), a community-maintained reference kept current with the live game patch. This project's code is an original implementation, not a copy or fork of any other X4 planning tool.
+
+Fonts are [Red Hat Text and Red Hat Mono](https://github.com/RedHatOfficial/RedHatFont), bundled in `fonts/` under the SIL Open Font License (`fonts/OFL.txt`). Icons are from [Phosphor Icons](https://phosphoricons.com) (MIT).
 
 ## For developers
 
-No build tooling — it's vanilla HTML/CSS/JS, kept that way on purpose so it always "just works" by double-clicking the file.
+No build tooling. It is vanilla HTML/CSS/JS, kept that way on purpose so it always works by double-clicking the file.
 
 **Files**
 
-- `index.html` / `style.css` — layout and theme
-- `app.js` — all app logic: sidebar, chain-rate math, SVG connector drawing, details panel, bottleneck/suggestion ranking
-- `data/wares.js` — the ware database (58 wares: 8 raw + 12/21/17 across tiers 1–3), loaded as a plain `<script>` tag so it works from a double-clicked `file://` page with no CORS/fetch issues
-- `data/wares.json` — the same data as plain JSON, kept as the source of truth for tooling. If you edit the data, edit this file, then regenerate `wares.js`:
+- `index.html` / `style.css`: layout and theme (design tokens at the top of `style.css`)
+- `app.js`: all app logic. One `refresh()` re-renders every surface from `state` after any change.
+- `data/wares.js`: the ware database (58 wares), loaded as a plain `<script>` tag so it works from a `file://` page with no fetch
+- `data/wares.json`: the same data as plain JSON, the source of truth for tooling. If you edit it, regenerate `wares.js`:
   ```bash
   python3 -c "import json; d=json.load(open('data/wares.json',encoding='utf-8')); open('data/wares.js','w',encoding='utf-8').write('const WARES_DATA = '+json.dumps(d,indent=2)+';\n')"
   ```
+- `fonts/`: self-hosted webfonts and their licence
 
 **Data model** (one entry per ware in `wares.json`):
 
@@ -75,15 +88,18 @@ No build tooling — it's vanilla HTML/CSS/JS, kept that way on purpose so it al
 }
 ```
 
-Tier 0 (`inputs: []`) isn't the same thing as "mined" — it just means nothing else feeds into it. Ore, Silicon, Ice, Helium, Hydrogen, Methane, and Raw Scrap are both tier 0 *and* `isMined: true`. Energy Cells is also tier 0 (a Solar Power Plant needs no material inputs) but `isMined: false` — it's a real built module, it just has no `cycleTime`/`batchSize` on record (Roguey's own data notes it "can not be constructed" in the normal recipe sense — X4 generates it from sunlight rather than a fixed batch/cycle recipe). The UI uses `isMined`, not `tier`, to decide whether a ware gets the checkbox-only "I have a source" treatment or the full module-count treatment.
+Tier 0 (`inputs: []`) is not the same thing as "mined". Ore, Silicon, Ice, Helium, Hydrogen, Methane, and Raw Scrap are tier 0 *and* `isMined: true`. Energy Cells is also tier 0 (a Solar Power Plant needs no material inputs) but `isMined: false`: it is a real built module with no `cycleTime`/`batchSize` on record, because X4 generates it from sunlight rather than a fixed recipe. The UI uses `isMined`, not `tier`, to decide whether a ware gets a plain "I have a source" tick or a module count. Wares without a production rate cannot contribute a supply number, so in the network view their tick counts as "covered".
 
-**Caching note**: if you edit `index.html`, `style.css`, or `app.js` and a browser reload doesn't seem to pick up the change, your browser is serving a cached copy — bump the `?v=11` query string on the `<link>`/`<script>` tags at the bottom of `index.html` to the next number to force a fresh fetch.
+**Saved data** lives in `localStorage` under `x4-factories-planner:module-counts` (built modules) and `x4-factories-planner:ui` (open chain, target, panel state). If storage is unavailable the app still works, it just does not remember.
+
+**Caching note**: if you edit `index.html`, `style.css`, or `app.js` and a reload does not pick up the change, your browser is serving a cached copy. Bump the `?v=15` query string on the `<link>`/`<script>` tags in `index.html` to the next number.
 
 ## Known limitations
 
-- **No alternate recipes.** X4 has multiple production *methods* for some wares (e.g. Teladi vs. Universal), each with different inputs. This build models one canonical recipe per ware. To add methods, change `inputs` on a ware to `methods: [{ name, race, inputs }]` and update `computeChain()` in `app.js` to pick a method per ware (a `<select>` on the node card would work well).
-- **No station module info** (build cost, workforce, race requirements). Roguey's site has this per-module if you want to pull it in.
+- **No alternate recipes.** X4 has multiple production *methods* for some wares (e.g. Teladi vs. Universal), each with different inputs. This build models one canonical recipe per ware. To add methods, change `inputs` on a ware to `methods: [{ name, race, inputs }]` and update `computeChain()` in `app.js` to pick a method per ware.
+- **No station module info** (build cost, workforce, race requirements).
+- **Built for a desktop window.** Narrow windows still work (panels overlay or scroll), but it is not a phone layout.
 
 ## Contributing
 
-Issues and pull requests are welcome — this is a small, dependency-free codebase, so most changes should be straightforward to review.
+Issues and pull requests are welcome. This is a small, dependency-free codebase, so most changes should be straightforward to review.
