@@ -19,6 +19,34 @@ const W = WARES_DATA;
 
 const STORAGE_KEY = "x4-factories-planner:module-counts";
 const UI_KEY = "x4-factories-planner:ui";
+const EMPIRE_KEY = "x4-factories-planner:empire";
+
+// ware IDs that changed when the data moved from a web scrape to the game files
+const RENAMED_WARES = { weaponscomponents: "weaponcomponents", scruffinfruit: "scruffinfruits" };
+
+/* Empire levels by estimated value added per hour. Pure flattery. */
+const LEVELS = [
+  { min: 0, name: "Space Toddler", flavor: "Your empire fits in a cockpit. Everyone starts somewhere." },
+  { min: 50e3, name: "Asteroid Licker", flavor: "One module and a dream. The ore is starting to taste like money." },
+  { min: 250e3, name: "Scrap Hoarder", flavor: "Several modules, a few credits, and a suspicious amount of drones." },
+  { min: 1e6, name: "Backwater Trader", flavor: "A million an hour. The locals have started saying your name." },
+  { min: 3e6, name: "Station Tycoon", flavor: "Real stations, real income. The Teladi are taking notes." },
+  { min: 8e6, name: "Sector Magnate", flavor: "A whole sector hums to the rhythm of your production lines." },
+  { min: 20e6, name: "Cluster Baron", flavor: "Factions check with you before they set their prices." },
+  { min: 60e6, name: "Galactic Industrialist", flavor: "The economy is no longer something you take part in. It is something you own." },
+  { min: 200e6, name: "Gate Network Overlord", flavor: "Every jump gate leads to one of your stations, or to a customer of one." },
+  { min: 1e9, name: "Billion-an-Hour Club", flavor: "A billion credits every hour. Banks open branches next to your stations." },
+  { min: 2e9, name: "Economic Black Hole", flavor: "Credits fall in. Nothing ever comes back out." },
+  { min: 4e9, name: "Living Stock Market", flavor: "Prices across the galaxy move when you sneeze." },
+  { min: 7.5e9, name: "Galactic Central Bank", flavor: "Factions borrow from you to pay their fleets." },
+  { min: 15e9, name: "Xenon Insurance Policy", flavor: "The Xenon have started avoiding your sectors. Out of respect." },
+  { min: 30e9, name: "Sun Hoarder", flavor: "You bought the sunlight. All of it." },
+  { min: 60e9, name: "Pocket Universe Owner", flavor: "Some sectors on the map are just your storage rooms." },
+  { min: 125e9, name: "Egosoft's Problem", flavor: "Your save file is now a support ticket." },
+  { min: 250e9, name: "Credit Singularity", flavor: "Your balance has its own gravity well." },
+  { min: 500e9, name: "Main Character", flavor: "The galaxy is just a backdrop for your production lines." },
+  { min: 1e12, name: "Super Mega Duper Huge Empire", flavor: "A trillion credits per hour. There is no level 21. You won X4." },
+];
 
 const TIER_LABELS = { 0: "Base resources", 1: "Tier 1", 2: "Tier 2", 3: "Tier 3", 4: "Tier 4" };
 const QUICK_PICKS = ["hullparts", "claytronics", "advancedelectronics", "engineparts", "shieldcomponents", "turretcomponents"];
@@ -30,6 +58,9 @@ const state = {
   chain: null,             // { nodes, edges } of the open chain
   inspected: null,         // ware shown in the inspector, null = closed
   networkOpen: false,
+  view: "planner",         // "planner" | "empire"
+  empire: null,            // stations read from a save, see importSave()
+  openStation: null,       // expanded station row in the empire view
   filter: "all",           // "all" | "built"
   query: "",
   collapsed: new Set(),    // collapsed sidebar tiers
@@ -47,6 +78,8 @@ const ICON_PATHS = {
   "upload-simple": "M224,144v64a8,8,0,0,1-8,8H40a8,8,0,0,1-8-8V144a8,8,0,0,1,16,0v56H208V144a8,8,0,0,1,16,0ZM93.66,77.66,120,51.31V144a8,8,0,0,0,16,0V51.31l26.34,26.35a8,8,0,0,0,11.32-11.32l-40-40a8,8,0,0,0-11.32,0l-40,40A8,8,0,0,0,93.66,77.66Z",
   "arrow-right": "M221.66,133.66l-72,72a8,8,0,0,1-11.32-11.32L196.69,136H40a8,8,0,0,1,0-16H196.69L138.34,61.66a8,8,0,0,1,11.32-11.32l72,72A8,8,0,0,1,221.66,133.66Z",
   "arrow-counter-clockwise": "M224,128a96,96,0,0,1-94.71,96H128A95.38,95.38,0,0,1,62.1,197.8a8,8,0,0,1,11-11.63A80,80,0,1,0,71.43,71.39a3.07,3.07,0,0,1-.26.25L44.59,96H72a8,8,0,0,1,0,16H24a8,8,0,0,1-8-8V56a8,8,0,0,1,16,0V85.8L60.25,60A96,96,0,0,1,224,128Z",
+  "folder-open": "M245,110.64A16,16,0,0,0,232,104H216V88a16,16,0,0,0-16-16H130.67L102.94,51.2a16.14,16.14,0,0,0-9.6-3.2H40A16,16,0,0,0,24,64V208h0a8,8,0,0,0,8,8H211.1a8,8,0,0,0,7.59-5.47l28.49-85.47A16.05,16.05,0,0,0,245,110.64ZM93.34,64,123.2,86.4A8,8,0,0,0,128,88h72v16H69.77a16,16,0,0,0-15.18,10.94L40,158.7V64Zm112,136H43.1l26.67-80H232Z",
+  "caret-right": "M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z",
 };
 
 function icon(name, size = 14) {
@@ -57,6 +90,22 @@ const $ = (id) => document.getElementById(id);
 
 const els = {
   status: $("status"),
+  rankChip: $("rank-chip"),
+  loadSave: $("load-save"),
+  saveFile: $("save-file"),
+  chainView: $("chain-view"),
+  empireView: $("empire-view"),
+  rankBadge: $("rank-badge"),
+  rankLevel: $("rank-level"),
+  rankName: $("rank-name"),
+  rankFlavor: $("rank-flavor"),
+  rankProfit: $("rank-profit"),
+  rankDay: $("rank-day"),
+  rankNext: $("rank-next"),
+  empireSource: $("empire-source"),
+  levelLadder: $("level-ladder"),
+  stationsNote: $("stations-note"),
+  stationList: $("station-list"),
   exportData: $("export-data"),
   importData: $("import-data"),
   importFile: $("import-file"),
@@ -109,8 +158,8 @@ function isBuilt(id) {
   return getCount(id) > 0;
 }
 
-// units/hour one module makes; 0 when the ware has no fixed production rate
-// (mined materials, and Energy Cells which X4 generates from sunlight)
+// units/hour one module makes with the main recipe at 100% efficiency
+// (Energy Cells: at 100% sunlight); 0 for mined wares
 function perModule(w) {
   return w.batchSize && w.cycleTime ? (w.batchSize * 3600) / w.cycleTime : 0;
 }
@@ -135,6 +184,30 @@ function fmtTime(sec) {
 
 function fmtPrice(n) {
   return `${n.toLocaleString("en-US")} Cr`;
+}
+
+// 21,834,112 -> "21.8M", for big credit figures
+function fmtCredits(n) {
+  // drop trailing zeros: "50.0k" -> "50k", "7.50B" -> "7.5B", "21.8M" stays
+  return fmtCreditsRaw(n).replace(/(\.\d*?)0+([kMBT])$/, "$1$2").replace(/\.([kMBT])$/, "$1");
+}
+
+function fmtCreditsRaw(n) {
+  const sign = n < 0 ? "-" : "";
+  const a = Math.abs(n);
+  if (a >= 1e12) return `${sign}${(a / 1e12).toFixed(a >= 1e13 ? 1 : 2)}T`;
+  if (a >= 1e9) return `${sign}${(a / 1e9).toFixed(a >= 1e10 ? 1 : 2)}B`;
+  if (a >= 1e6) return `${sign}${(a / 1e6).toFixed(a >= 1e8 ? 0 : 1)}M`;
+  if (a >= 1e3) return `${sign}${(a / 1e3).toFixed(a >= 1e5 ? 0 : 1)}k`;
+  return `${sign}${Math.round(a)}`;
+}
+
+function fmtPercent(x) {
+  return `${Math.round(x * 100)}%`;
+}
+
+function stationLabel(st) {
+  return st.name || `Station ${st.code || "?"}`;
 }
 
 function trimNumber(n) {
@@ -164,7 +237,8 @@ function loadCounts() {
 
 function applyCounts(obj) {
   let applied = 0;
-  for (const [id, count] of Object.entries(obj || {})) {
+  for (const [rawID, count] of Object.entries(obj || {})) {
+    const id = RENAMED_WARES[rawID] || rawID;
     const n = Math.floor(Number(count));
     if (W[id] && n > 0) {
       state.moduleCounts.set(id, W[id].isMined ? 1 : n);
@@ -187,6 +261,7 @@ function loadUI() {
     const ui = JSON.parse(localStorage.getItem(UI_KEY) || "null");
     if (!ui) return null;
     state.networkOpen = !!ui.networkOpen;
+    state.view = ui.view === "empire" ? "empire" : "planner";
     state.filter = ui.filter === "built" ? "built" : "all";
     state.collapsed = new Set(Array.isArray(ui.collapsed) ? ui.collapsed.map(Number) : []);
     return ui;
@@ -201,11 +276,33 @@ function saveUI() {
       selected: state.selected,
       targetRate: state.targetRate,
       networkOpen: state.networkOpen,
+      view: state.view,
       filter: state.filter,
       collapsed: [...state.collapsed],
     }));
   } catch (e) {
     /* not fatal */
+  }
+}
+
+function loadEmpire() {
+  try {
+    const empire = JSON.parse(localStorage.getItem(EMPIRE_KEY) || "null");
+    if (empire && Array.isArray(empire.stations)) {
+      for (const st of empire.stations) st.modules = st.modules.filter((m) => W[m.ware] && W[m.ware].recipes[m.method]);
+      state.empire = empire;
+    }
+  } catch (e) {
+    console.warn("Could not load the imported empire:", e);
+  }
+}
+
+function saveEmpire() {
+  try {
+    if (state.empire) localStorage.setItem(EMPIRE_KEY, JSON.stringify(state.empire));
+    else localStorage.removeItem(EMPIRE_KEY);
+  } catch (e) {
+    console.warn("Could not save the imported empire:", e);
   }
 }
 
@@ -220,10 +317,13 @@ function refresh() {
   const fk = active && active.dataset ? active.dataset.fk : null;
 
   syncSidebar();
+  renderView();
   renderChainBar();
   renderChain();
   renderInspector();
   renderNetwork();
+  renderRank();
+  renderEmpire();
   saveUI();
 
   if (fk) {
@@ -487,7 +587,7 @@ function renderChainBar() {
 
   els.chainName.textContent = w.label;
   const facts = [TIER_LABELS[w.tier] || "Tier " + w.tier, `${w.storageType.toLowerCase()} storage`];
-  if (pm) facts.push(`one module makes ${fmtRate(pm)} per hour`);
+  if (pm) facts.push(`one module makes ${fmtRate(pm)} per hour${w.recipes[w.mainMethod].sunlight ? " at 100% sunlight" : ""}`);
   else facts.push(w.isMined ? "mined, not built" : "no fixed production rate");
   els.chainSub.textContent = facts.join(", ");
 
@@ -731,18 +831,23 @@ function renderInspector() {
     stats.push(["Source", w.isMined ? "Mined or collected" : "Built, no fixed rate"]);
   }
 
-  const inputs = w.inputs.length
-    ? `<section class="inspector-section">
-        <h3>Inputs</h3>
-        <div class="cols-head"><span>Ware</span><span>per cycle</span><span>per hour</span></div>
-        ${w.inputs.map((i) => `
+  // one block per recipe; race variants (Teladi, Terran, ...) after the main one
+  const methods = Object.keys(w.recipes).sort((a, b) => (a === w.mainMethod ? -1 : b === w.mainMethod ? 1 : a.localeCompare(b)));
+  const inputs = methods.map((method) => {
+    const r = w.recipes[method];
+    const title = methods.length === 1 ? "Inputs" : method === w.mainMethod ? "Standard recipe" : `${METHOD_LABEL[method] || method} recipe`;
+    const yieldNote = method === w.mainMethod ? "" : `<p class="quiet-note recipe-note">${r.amount} per ${fmtTime(r.time)} cycle</p>`;
+    const body = r.inputs.length
+      ? `<div class="cols-head"><span>Ware</span><span>per cycle</span><span>per hour</span></div>
+         ${r.inputs.map((i) => `
           <button type="button" class="link-row" data-action="goto" data-id="${i.wareID}">
             <span class="name">${W[i.wareID].label}</span>
             <span class="num">${i.amount}</span>
-            <span class="num dim">${pm ? fmtRate((i.amount * 3600) / w.cycleTime) : ""}</span>
-          </button>`).join("")}
-      </section>`
-    : "";
+            <span class="num dim">${fmtRate((i.amount * 3600) / r.time)}</span>
+          </button>`).join("")}`
+      : `<p class="quiet-note">${r.sunlight ? "Needs only sunlight. Output scales with the sector's sunlight." : "Needs no material inputs."}</p>`;
+    return `<section class="inspector-section"><h3>${title}</h3>${yieldNote}${body}</section>`;
+  }).join("");
 
   const uses = usedBy.length
     ? `<section class="inspector-section">
@@ -781,19 +886,72 @@ function renderInspector() {
    is taken as "this is covered" instead of a number.
 --------------------------------------------------------------------- */
 
+/* Production units: every built module, with the recipe it really runs and
+   its efficiency. Modules read from a save keep their race recipe and the
+   efficiency the game recorded (sunlight and workforce included). Anything
+   the player entered by hand on top of that runs the main recipe at 100%. */
+function productionUnits() {
+  const imported = new Map();
+  if (state.empire) {
+    for (const st of state.empire.stations) {
+      for (const m of st.modules) {
+        if (!imported.has(m.ware)) imported.set(m.ware, []);
+        imported.get(m.ware).push(m);
+      }
+    }
+  }
+
+  const units = [];
+  for (const [id, count] of state.moduleCounts) {
+    const w = W[id];
+    if (!perModule(w)) continue;
+    let left = count;
+    for (const m of imported.get(id) || []) {
+      if (left <= 0) break;
+      const n = Math.min(left, m.count);
+      units.push({ ware: id, method: m.method, count: n, efficiency: m.efficiency });
+      left -= n;
+    }
+    if (left > 0) units.push({ ware: id, method: w.mainMethod, count: left, efficiency: 1 });
+  }
+  return units;
+}
+
+// per hour: what a group of modules makes, what it uses, and the value it adds
+function unitFlows(u) {
+  const w = W[u.ware];
+  const r = w.recipes[u.method] || w.recipes[w.mainMethod];
+  const cyclesPerHour = (3600 / r.time) * u.count;
+  const made = r.amount * cyclesPerHour * u.efficiency;
+  const uses = r.inputs.map((i) => ({ ware: i.wareID, amount: i.amount * cyclesPerHour }));
+  const value = made * w.price.avg - uses.reduce((sum, i) => sum + i.amount * W[i.ware].price.avg, 0);
+  return { made, uses, value };
+}
+
+// Estimated value added per hour at average prices: everything made is
+// worth its average price, every input costs its average price.
+function empireProfit() {
+  return productionUnits().reduce((sum, u) => sum + unitFlows(u).value, 0);
+}
+
+function stationProfit(st) {
+  return st.modules.reduce((sum, m) => sum + unitFlows(m).value, 0);
+}
+
+function levelFor(profit) {
+  let i = 0;
+  while (i + 1 < LEVELS.length && profit >= LEVELS[i + 1].min) i++;
+  return { index: i, level: LEVELS[i], next: LEVELS[i + 1] || null };
+}
+
 function computeBalance() {
   const supply = new Map();
   const demand = new Map();
 
-  for (const [id, count] of state.moduleCounts) {
-    const w = W[id];
-    const pm = perModule(w);
-    if (!pm) continue;
-    supply.set(id, pm * count);
-    const cyclesPerHour = (3600 / w.cycleTime) * count;
-    for (const inp of w.inputs) {
-      demand.set(inp.wareID, (demand.get(inp.wareID) || 0) + cyclesPerHour * inp.amount);
-    }
+  for (const u of productionUnits()) {
+    const f = unitFlows(u);
+    supply.set(u.ware, (supply.get(u.ware) || 0) + f.made);
+    for (const i of f.uses) demand.set(i.ware, (demand.get(i.ware) || 0) + i.amount);
   }
 
   const rows = [...new Set([...supply.keys(), ...demand.keys()])].map((id) => {
@@ -851,6 +1009,8 @@ function renderNetwork() {
   const moduleTotal = builtIDs.reduce((sum, id) => sum + getCount(id), 0);
   const balance = computeBalance();
   const shortCount = balance.filter((r) => r.short).length;
+  const madeByWare = new Map();
+  for (const u of productionUnits()) madeByWare.set(u.ware, (madeByWare.get(u.ware) || 0) + unitFlows(u).made);
 
   // summary stays readable while the drawer is closed
   if (!state.moduleCounts.size) {
@@ -865,7 +1025,7 @@ function renderNetwork() {
   // built modules (mined wares are "sourced", not modules, so not listed)
   els.builtList.innerHTML = builtIDs.length
     ? builtIDs.map((id) => {
-        const pm = perModule(W[id]);
+        const made = madeByWare.get(id) || 0;
         const count = getCount(id);
         return `<div class="net-row is-built">
           <button type="button" class="net-name" data-action="goto" data-id="${id}" data-fk="net:${id}:name">${W[id].label}</button>
@@ -874,7 +1034,7 @@ function renderNetwork() {
             <input type="number" class="net-count" min="0" step="1" value="${count}" data-id="${id}" data-fk="net:${id}:count" aria-label="Modules of ${W[id].label} built">
             <button type="button" data-action="inc" data-id="${id}" data-fk="net:${id}:inc" aria-label="One module more">${icon("plus", 12)}</button>
           </span>
-          <span class="num dim" title="Total output per hour">${pm ? fmtRate(pm * count) + "/h" : "no rate"}</span>
+          <span class="num dim" title="Total output per hour">${made ? fmtRate(made) + "/h" : "no rate"}</span>
           <button type="button" class="icon-btn is-danger" data-action="remove" data-id="${id}" aria-label="Remove ${W[id].label}" title="Remove">${icon("x", 12)}</button>
         </div>`;
       }).join("")
@@ -935,6 +1095,282 @@ function renderNetwork() {
         </div>`;
       }).join("")
     : `<p class="quiet-note">Everything is built. Nothing left to suggest.</p>`;
+}
+
+/* ---------------------------------------------------------------------
+   Views, empire level, and the empire (stations) view
+--------------------------------------------------------------------- */
+
+const METHOD_LABEL = {
+  teladi: "Teladi", terran: "Terran", boron: "Boron", paranid: "Paranid",
+  split: "Split", argon: "Argon", recycling: "Recycling",
+};
+
+function setView(view) {
+  state.view = view;
+  refresh();
+}
+
+function renderView() {
+  const empire = state.view === "empire";
+  els.chainView.hidden = empire;
+  els.empireView.hidden = !empire;
+  document.querySelectorAll(".view-switch button").forEach((b) => {
+    b.setAttribute("aria-pressed", String(b.dataset.view === state.view));
+  });
+}
+
+function badgeHTML(index, size) {
+  return X4Badges.badgeSVG(index, size, `Level ${index + 1}: ${LEVELS[index].name}`);
+}
+
+function renderRank() {
+  const profit = empireProfit();
+  const { index, level } = levelFor(profit);
+  const hasData = state.moduleCounts.size > 0;
+  els.rankChip.hidden = !hasData;
+  if (hasData) {
+    els.rankChip.innerHTML = `${badgeHTML(index, 30)}<span class="rank-chip-num num">${index + 1}</span><span class="rank-chip-name">${level.name}</span>`;
+    els.rankChip.title = `Level ${index + 1}: ${level.name}, about ${fmtCredits(profit)} Cr per hour. Click for details.`;
+  }
+}
+
+function renderEmpire() {
+  if (state.view !== "empire") return;
+
+  const profit = empireProfit();
+  const { index, level, next } = levelFor(profit);
+
+  els.rankBadge.innerHTML = badgeHTML(index, 124);
+  els.rankLevel.textContent = `Level ${index + 1} of ${LEVELS.length}`;
+  els.rankName.textContent = level.name;
+  els.rankFlavor.textContent = level.flavor;
+  els.rankProfit.textContent = fmtCredits(Math.max(0, profit));
+  els.rankDay.textContent = profit > 0
+    ? `About ${fmtCredits(profit * 24)} Cr per in-game day, estimated from average prices.`
+    : "Track some production modules to start earning a rank.";
+  if (next) {
+    const span = next.min - level.min;
+    const done = Math.min(1, Math.max(0, (profit - level.min) / span));
+    els.rankNext.innerHTML = `
+      <div class="rank-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(done * 100)}" aria-label="Progress to ${next.name}"><span style="transform:scaleX(${done})"></span></div>
+      <p>${fmtCredits(next.min - profit)} Cr per hour more to reach <strong>${next.name}</strong></p>`;
+  } else {
+    els.rankNext.innerHTML = `<p>Top level. There is nowhere left to go but sideways.</p>`;
+  }
+
+  renderLadder(index);
+  renderEmpireSource();
+  renderStations();
+}
+
+function renderLadder(current) {
+  els.levelLadder.innerHTML = LEVELS.map((lvl, i) => {
+    const cls = i === current ? "is-current" : i < current ? "is-reached" : "is-locked";
+    return `<li class="${cls}"${i === current ? ' aria-current="step"' : ""}>
+      ${badgeHTML(i, 58)}
+      <span class="ladder-num">Level ${i + 1}</span>
+      <span class="ladder-name">${lvl.name}</span>
+      <span class="ladder-min num">${i === 0 ? "start" : fmtCredits(lvl.min) + "/h"}</span>
+    </li>`;
+  }).join("");
+}
+
+function renderEmpireSource() {
+  if (state.importing) {
+    const pct = Math.round(state.importing.progress * 100);
+    els.empireSource.innerHTML = `
+      <div class="source-text">
+        <h2>Reading ${state.importing.fileName}</h2>
+        <p class="quiet-note">Unpacking and scanning on this computer. Large saves take a little while.</p>
+      </div>
+      <div class="load-progress"><div class="rank-bar"><span style="transform:scaleX(${state.importing.progress})"></span></div><span class="num">${pct}%</span></div>`;
+    return;
+  }
+
+  const e = state.empire;
+  if (!e) {
+    els.empireSource.innerHTML = `
+      <div class="source-text">
+        <h2>Load your empire from a save</h2>
+        <p>X4 keeps saves in <code>Documents\\Egosoft\\X4\\&lt;number&gt;\\save</code>. Pick the newest one, for example <code>quicksave.xml.gz</code>. It is read on this computer and never uploaded.</p>
+        <p class="quiet-note">Your stations, their modules, race recipes, sunlight and workforce come straight from the save. Built counts you entered by hand are replaced.</p>
+      </div>
+      <button type="button" class="btn is-primary" data-action="load-save">${icon("folder-open")}Load save</button>`;
+    return;
+  }
+
+  const moduleTotal = e.stations.reduce((s, st) => s + st.modules.reduce((a, m) => a + m.count, 0), 0);
+  const when = e.savedAt ? new Date(e.savedAt * 1000).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "unknown date";
+  els.empireSource.innerHTML = `
+    <div class="source-text">
+      <h2>${e.saveName ? `From "${escapeHTML(e.saveName)}"` : "From your save"}</h2>
+      <p class="quiet-note">Saved ${when}. ${e.stations.length} ${plural(e.stations.length, "station")}, ${moduleTotal} production ${plural(moduleTotal, "module")}${e.skipped ? `, ${e.skipped} other ${plural(e.skipped, "module")} skipped` : ""}.</p>
+    </div>
+    <div class="source-actions">
+      <button type="button" class="btn" data-action="load-save">${icon("folder-open")}Load newer save</button>
+      <button type="button" class="btn" data-action="forget-save" title="Keep your built counts, drop the station details">Forget save</button>
+    </div>`;
+}
+
+function renderStations() {
+  const e = state.empire;
+  if (!e) {
+    els.stationsNote.textContent = "";
+    els.stationList.innerHTML = `<p class="quiet-note">Load a save to see every station you own, what it makes and roughly what it earns.</p>`;
+    return;
+  }
+
+  const rows = e.stations
+    .map((st) => ({ st, profit: stationProfit(st), modules: st.modules.reduce((a, m) => a + m.count, 0) }))
+    .sort((a, b) => b.profit - a.profit || b.modules - a.modules);
+
+  els.stationsNote.textContent = "Estimated value added per hour: output at average price minus inputs at average price.";
+  els.stationList.innerHTML = `
+    <div class="st-row st-head"><span></span><span>Station</span><span>Sector</span><span>Modules</span><span>Workforce</span><span>Per hour</span></div>
+    ${rows.map(({ st, profit, modules }) => {
+      const open = state.openStation === st.id;
+      return `
+      <div class="st-item${open ? " is-open" : ""}">
+        <button type="button" class="st-row" data-action="toggle-station" data-id="${escapeHTML(st.id)}" aria-expanded="${open}">
+          <span class="st-caret">${icon("caret-right", 12)}</span>
+          <span class="st-name">${escapeHTML(stationLabel(st))}${st.underConstruction ? ` <span class="tag is-plain">building</span>` : ""}</span>
+          <span class="st-sector" title="Sunlight ${fmtPercent(st.sunlight)}">${escapeHTML(st.sectorName)}</span>
+          <span class="num">${modules || "none"}</span>
+          <span class="num dim">${st.workforce ? st.workforce.toLocaleString("en-US") : "none"}</span>
+          <span class="num ${profit > 0 ? "is-ok" : profit < 0 ? "is-short" : "dim"}">${modules ? fmtCredits(profit) : "none"}</span>
+        </button>
+        ${open ? stationDetail(st) : ""}
+      </div>`;
+    }).join("")}`;
+}
+
+function stationDetail(st) {
+  if (!st.modules.length) {
+    return `<div class="st-detail"><p class="quiet-note">No production modules. Docks, storage, defence or trade only.</p></div>`;
+  }
+
+  const net = new Map();
+  const groups = st.modules
+    .map((m) => ({ m, f: unitFlows(m) }))
+    .sort((a, b) => b.f.value - a.f.value);
+  for (const { m, f } of groups) {
+    net.set(m.ware, (net.get(m.ware) || 0) + f.made);
+    for (const i of f.uses) net.set(i.ware, (net.get(i.ware) || 0) - i.amount);
+  }
+  const inbound = [...net].filter(([, v]) => v < -1e-6).sort((a, b) => a[1] - b[1]);
+  const outbound = [...net].filter(([, v]) => v > 1e-6).sort((a, b) => b[1] - a[1]);
+  const flowList = (list) => list.length
+    ? list.map(([id, v]) => `<button type="button" class="link-row" data-action="inspect" data-id="${id}"><span class="name">${W[id].label}</span><span></span><span class="num">${fmtRate(Math.abs(v))}/h</span></button>`).join("")
+    : `<p class="quiet-note">Nothing.</p>`;
+
+  return `
+    <div class="st-detail">
+      <div class="st-modules">
+        <div class="mod-row mod-head"><span>Module</span><span>Count</span><span>Efficiency</span><span>Makes</span><span>Value</span></div>
+        ${groups.map(({ m, f }) => `
+          <div class="mod-row">
+            <button type="button" class="net-name" data-action="inspect" data-id="${m.ware}">${W[m.ware].label}${METHOD_LABEL[m.method] ? ` <span class="method">${METHOD_LABEL[m.method]}</span>` : ""}</button>
+            <span class="num">${m.count}</span>
+            <span class="num dim" title="Includes sunlight and the workforce bonus">${fmtPercent(m.efficiency)}</span>
+            <span class="num">${fmtRate(f.made)}/h</span>
+            <span class="num ${f.value >= 0 ? "is-ok" : "is-short"}">${fmtCredits(f.value)}</span>
+          </div>`).join("")}
+      </div>
+      <div class="st-flows">
+        <section><h3>Ships in</h3>${flowList(inbound)}</section>
+        <section><h3>Ships out</h3>${flowList(outbound)}</section>
+      </div>
+    </div>`;
+}
+
+function escapeHTML(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+}
+
+/* ---------------------------------------------------------------------
+   Save import
+--------------------------------------------------------------------- */
+
+async function importSave(file) {
+  if (state.importing) return;
+  state.importing = { progress: 0, fileName: file.name };
+  state.view = "empire";
+  refresh();
+
+  let lastPaint = 0;
+  const onProgress = (p) => {
+    state.importing.progress = p;
+    const now = performance.now();
+    if (now - lastPaint > 120) {
+      lastPaint = now;
+      renderEmpireSource();
+    }
+  };
+
+  try {
+    const { stations, info } = await X4Save.readFile(file, onProgress);
+    if (!stations.length && !info.version) {
+      throw new Error("it does not look like an X4 save file");
+    }
+
+    let skipped = 0;
+    const converted = stations.map((s, i) => {
+      const sector = SECTORS[s.sector] || null;
+      const groups = new Map();
+      for (const m of s.modules) {
+        const mapped = MODULE_MACROS[m.macro];
+        if (!m.built || !mapped) {
+          skipped++;
+          continue;
+        }
+        const recipe = W[mapped.ware].recipes[mapped.method];
+        // modules idle when the game saved store no efficiency; assume
+        // sunlight for solar and 100% for everything else
+        const eff = m.efficiency != null ? m.efficiency : recipe.sunlight ? (sector ? sector.sunlight : 1) : 1;
+        const key = `${mapped.ware}|${mapped.method}`;
+        if (!groups.has(key)) groups.set(key, { ware: mapped.ware, method: mapped.method, count: 0, effSum: 0 });
+        const g = groups.get(key);
+        g.count++;
+        g.effSum += eff;
+      }
+      return {
+        id: s.code || `station-${i}`,
+        name: s.name,
+        code: s.code,
+        sectorName: sector ? sector.name : "Unknown sector",
+        sunlight: sector ? sector.sunlight : 1,
+        workforce: s.workforce,
+        habitats: s.habitats,
+        underConstruction: s.underConstruction,
+        modules: [...groups.values()].map((g) => ({ ware: g.ware, method: g.method, count: g.count, efficiency: g.effSum / g.count })),
+      };
+    });
+
+    // built counts now come from the save; "I have a source" ticks on mined wares stay
+    for (const id of [...state.moduleCounts.keys()]) if (!W[id].isMined) state.moduleCounts.delete(id);
+    for (const st of converted) for (const m of st.modules) state.moduleCounts.set(m.ware, getCount(m.ware) + m.count);
+
+    state.empire = {
+      saveName: info.name || file.name,
+      savedAt: Number(info.date) || null,
+      importedAt: Date.now(),
+      skipped,
+      stations: converted,
+    };
+    state.openStation = null;
+    saveCounts();
+    saveEmpire();
+
+    const moduleTotal = converted.reduce((s, st) => s + st.modules.reduce((a, m) => a + m.count, 0), 0);
+    setStatus(`Loaded ${converted.length} ${plural(converted.length, "station")} and ${moduleTotal} production ${plural(moduleTotal, "module")}.`);
+  } catch (e) {
+    console.error(e);
+    setStatus(`Could not read that save: ${e.message || e}.`);
+  } finally {
+    state.importing = null;
+    refresh();
+  }
 }
 
 /* ---------------------------------------------------------------------
@@ -1004,7 +1440,9 @@ function handleReset() {
   }
   disarmReset();
   state.moduleCounts.clear();
+  state.empire = null;
   saveCounts();
+  saveEmpire();
   refresh();
   setStatus("Cleared everything you had marked as built.");
 }
@@ -1094,6 +1532,33 @@ function bindEvents() {
     if (btn) selectWare(btn.dataset.id);
   });
 
+  // views and empire
+  document.querySelectorAll(".view-switch button").forEach((btn) => {
+    btn.addEventListener("click", () => setView(btn.dataset.view));
+  });
+  els.rankChip.addEventListener("click", () => setView("empire"));
+  els.loadSave.addEventListener("click", () => els.saveFile.click());
+  els.saveFile.addEventListener("change", () => {
+    if (els.saveFile.files[0]) importSave(els.saveFile.files[0]);
+    els.saveFile.value = "";
+  });
+  els.empireView.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-action]");
+    if (!btn) return;
+    const { action, id } = btn.dataset;
+    if (action === "load-save") els.saveFile.click();
+    else if (action === "forget-save") {
+      state.empire = null;
+      state.openStation = null;
+      saveEmpire();
+      refresh();
+      setStatus("Station details dropped. Your built counts are kept.");
+    } else if (action === "toggle-station") {
+      state.openStation = state.openStation === id ? null : id;
+      renderStations();
+    } else if (action === "inspect") inspect(id);
+  });
+
   // data
   els.exportData.addEventListener("click", exportData);
   els.importData.addEventListener("click", () => els.importFile.click());
@@ -1130,6 +1595,7 @@ function bindEvents() {
 }
 
 function init() {
+  loadEmpire();
   loadCounts();
   const ui = loadUI();
 

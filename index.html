@@ -7,7 +7,7 @@
 <meta name="description" content="Production chain planner for X4: Foundations. See what a ware needs, track what you have built, find shortfalls.">
 <title>X4 Factories Planner</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23131619'/%3E%3Cpath d='M11 10h5v6h5M11 22h5v-6' fill='none' stroke='%2339414a' stroke-width='2'/%3E%3Crect x='5' y='7' width='7' height='6' rx='1.5' fill='%23a9b1ba'/%3E%3Crect x='5' y='19' width='7' height='6' rx='1.5' fill='%23a9b1ba'/%3E%3Crect x='20' y='12' width='8' height='8' rx='2' fill='%234fcab9'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="style.css?v=15">
+<link rel="stylesheet" href="style.css?v=20">
 </head>
 <body>
 <div id="app">
@@ -17,8 +17,15 @@
       <span class="brand-mark">X4</span>
       <span class="brand-name">Factories Planner</span>
     </div>
+    <nav class="segmented view-switch" aria-label="View">
+      <button type="button" data-view="planner" aria-pressed="true">Planner</button>
+      <button type="button" data-view="empire" aria-pressed="false">Empire</button>
+    </nav>
+    <button type="button" id="rank-chip" title="Your empire level. Click for details." hidden></button>
     <p id="status" role="status" aria-live="polite"></p>
     <div class="topbar-actions">
+      <button type="button" class="btn is-primary" id="load-save" title="Read your stations and modules from an X4 save file"><span data-icon="folder-open"></span>Load save</button>
+      <input type="file" id="save-file" accept=".gz,.xml,application/gzip,application/xml" hidden>
       <button type="button" class="btn" id="export-data" title="Save your built modules to a file"><span data-icon="download-simple"></span>Export</button>
       <button type="button" class="btn" id="import-data" title="Load built modules from a file"><span data-icon="upload-simple"></span>Import</button>
       <input type="file" id="import-file" accept="application/json,.json" hidden>
@@ -79,6 +86,37 @@
       </div>
     </main>
 
+    <main id="empire-view" hidden>
+      <section class="rank-panel" aria-labelledby="rank-name">
+        <div class="rank-badge" id="rank-badge" aria-hidden="true"></div>
+        <div class="rank-text">
+          <p class="rank-level" id="rank-level"></p>
+          <h1 id="rank-name"></h1>
+          <p class="rank-flavor" id="rank-flavor"></p>
+        </div>
+        <div class="rank-figures">
+          <p class="rank-profit"><span class="num" id="rank-profit"></span><span class="unit">Cr per hour</span></p>
+          <p class="rank-day" id="rank-day"></p>
+          <div class="rank-next" id="rank-next"></div>
+        </div>
+      </section>
+
+      <section class="empire-source" id="empire-source" aria-live="polite"></section>
+
+      <section class="levels" aria-labelledby="levels-title">
+        <h2 id="levels-title">Levels</h2>
+        <ol id="level-ladder"></ol>
+      </section>
+
+      <section class="stations" aria-labelledby="stations-title">
+        <div class="stations-head">
+          <h2 id="stations-title">Stations</h2>
+          <p class="quiet-note" id="stations-note"></p>
+        </div>
+        <div id="station-list"></div>
+      </section>
+    </main>
+
     <aside id="details" aria-label="Ware details" hidden>
       <div id="details-content"></div>
     </aside>
@@ -109,7 +147,9 @@
 
 </div>
 
-<script src="data/wares.js?v=15"></script>
-<script src="app.js?v=15"></script>
+<script src="data/wares.js?v=20"></script>
+<script src="savegame.js?v=20"></script>
+<script src="badges.js?v=20"></script>
+<script src="app.js?v=20"></script>
 </body>
 </html>

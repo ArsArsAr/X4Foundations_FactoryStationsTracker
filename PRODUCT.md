@@ -20,21 +20,24 @@ Unlike static production-chain reference charts (e.g. x4prodchart.com), this too
 
 ## Operating Context
 
-Used alongside an active X4: Foundations play session, most likely a second window or monitor while the game runs. Opened by double-clicking `index.html` directly — no dev server, no build step, no install, works fully offline. Ware/recipe data (58 wares, current-patch numbers) is baked into `data/wares.js` at build time, not fetched live.
+Used alongside an active X4: Foundations play session, most likely a second window or monitor while the game runs. Opened by double-clicking `index.html` directly — no dev server, no build step, no install, works fully offline. Ware, recipe, module and sector data (X4 9.00 game files, base game plus official DLC) is generated into `data/wares.js` by `tools/build_data.py`, not fetched live. The player's own empire is read from their save file in the browser.
 
 ## Capabilities and Constraints
+
+- Save import: the player picks an X4 save (`.xml.gz` or plain `.xml`, 500 MB to 1 GB unpacked); `savegame.js` streams and scans it in the browser in a few seconds and nothing is uploaded. It reads every player-owned station's name, sector, production modules (with recipe and recorded efficiency), habitats and workforce. Imported built counts replace hand-entered ones; hand edits afterwards are layered on top until the next load.
+- Gamification: estimated empire earnings per hour (value added at average prices) map to twenty playful levels, from Space Toddler to Super Mega Duper Huge Empire (level 10 is a billion credits per hour, level 20 a trillion), shown as a badge. It is deliberately a flattering estimate, not a credit forecast.
 
 - Must keep working as a zero-install, double-clicked `file://` page — no server dependency for core functionality. This was an explicit, confirmed hard constraint.
 - No network dependency at all: fonts (Red Hat Text / Red Hat Mono, OFL) are self-hosted in `fonts/` and icons are inlined, so the app is fully offline.
 - The "My Factories" module counts persist in the browser's `localStorage` (key `x4-factories-planner:module-counts`), so they survive reloads and reopening the file. The top bar has Export and Import (a JSON file, so data can move between browsers or be shared) and a two-click Reset that wipes it. The open chain, target and panel state are saved too (key `x4-factories-planner:ui`). This reverses the tool's original session-only design — the user explicitly asked for persistence.
 - No accounts, backend, or shared/multiplayer state today. Sharing with other players (see Users) currently means sharing the files themselves, not a hosted service — avoid decisions that would block adding that later, but don't build it preemptively.
-- Only one canonical recipe is modeled per ware; X4's alternate production methods (e.g. Teladi vs. Universal variants) aren't represented yet.
+- Every race recipe a player module can run is modelled (Teladi, Terran, Boron, Paranid, Split). Modules read from a save use their own recipe and the efficiency the game recorded; the chain planner plans with each ware's standard recipe.
 - Module counts (and the bottleneck analysis built on them) only produce real supply numbers for wares with a batch size + cycle time on record. Whether a ware gets the checkbox-only "I have a source" treatment vs. a full editable module count is driven by `isMined` (true only for Ore, Silicon, Ice, Helium, Hydrogen, Methane, Raw Scrap — the wares actually gathered by mining/collection ships), not by tier and not by whether rate data exists. Energy Cells is `isMined: false` — it's a real built module (Solar Power Plant), it just has no fixed batch/cycle rate on record, so it gets full module-count tracking but is still excluded from bottleneck supply math the same way mined materials are (the checkbox is trusted as "covered" rather than computed).
-- Ware/recipe data is sourced from Roguey's X4 site (a community reference), not scraped from x4prodchart.com's code — that site is closed-source ("all rights reserved").
+- Data comes from the game files via `tools/build_data.py` (earlier versions used Roguey's X4 site, which matched on every shared ware). Nothing is taken from x4prodchart.com, which is closed-source ("all rights reserved").
 
 ## Evidence on Hand
 
-- `data/wares.js` / `data/wares.json`: 58 wares (8 raw + 12/21/17 across tiers 1–3) with price, volume, cycle time, batch size, and inputs, sourced from https://roguey.co.uk/x4/wares/.
+- `data/wares.js` / `data/wares.json`: 59 wares with all player-buildable recipes, 61 production module macros mapped to ware and recipe, and 192 sectors with sunlight, generated from the 9.00 game files.
 - `README.md` documents the data model, file layout, and known gaps (alternate recipe methods, no persistence, no module/build-cost info).
 - No testimonials, pricing, or usage benchmarks exist for this project — none should be fabricated.
 

@@ -1,6 +1,6 @@
 # X4 Factories Planner
 
-A production-chain planner for **[X4: Foundations](https://www.egosoft.com/games/x4/info_en.html)**. Pick any ware and see its entire production chain unwound down to raw materials, sized for the output you want, next to what you have already built. A network view then tells you where your real production falls short and what to build next.
+A production-chain planner for **[X4: Foundations](https://www.egosoft.com/games/x4/info_en.html)**. Load your save and it reads every station you own, with each one's modules, race recipes, sunlight and workforce. It shows roughly what each station earns, ranks your empire from Space Toddler upwards, and plans any production chain down to raw materials next to what you already have.
 
 No install, no account, no server, no internet needed. Clone it, double-click `index.html`, and it runs in your browser.
 
@@ -8,97 +8,94 @@ No install, no account, no server, no internet needed. Clone it, double-click `i
 
 ## Why
 
-X4's economy is a real dependency graph. Almost everything needs Energy Cells, most mid-tier goods need two or three refined inputs, and it is easy to lose track of what a new factory costs to feed once you are a dozen stations deep. This tool does the chain maths for you: give it a ware and a target, and it tells you how many modules of each upstream good you need, all the way down to what you should be mining.
-
-## Three numbers, kept apart
-
-The app deals in three different numbers, and the interface labels each one in words so they do not get mixed up:
-
-| Number | Meaning | Scope |
-|---|---|---|
-| **Target** | The output the open chain is sized for. A what-if. | The open chain only |
-| **Needed** | Modules and hourly rates that target implies for every input | The open chain only |
-| **Built** | What you say you actually have. Saved in your browser. | Your whole network |
+X4's economy is a real dependency graph. Almost everything needs Energy Cells, most mid-tier goods need two or three refined inputs, and it is easy to lose track of what a new factory costs to feed once you are a dozen stations deep. This tool does the chain maths for you and reads your real empire straight from the save, so you never have to type in module counts by hand.
 
 ## Features
 
-- **Production chains as a diagram.** Every input of a ware, tier by tier, down to raw materials. Columns are ordered so each ware sits near what it feeds, which keeps crossing lines to a minimum.
-- **Target in modules or units per hour.** The two fields stay in sync. Opening a ware you have built sizes the chain for your built modules; **Use my N built** snaps back to that at any time.
-- **Needed versus built on every node.** Each node states how many modules the target needs and how many you have, and flags a shortfall ("2 built, short 2").
-- **Flow on hover.** Hover or focus a node to highlight its connections and see how much flows along each one per hour.
-- **Track what you have built, from anywhere.** Tick a ware in the list for a quick "I produce this" (one module), type an exact count next to it, use the plus on a chain node, or the stepper in the details panel. Mined wares only have a tick, meaning "I have a source".
-- **My network.** Supply and demand per hour across everything you have built, shortfalls first, each with a one-click fix that adds the missing modules. Also lists what to build next, ranked by how few new inputs it needs.
-- **Export and import.** Save your built modules to a JSON file and load them on another machine or browser.
-- **Details panel.** Price range, volume, storage class, cycle time, batch size, inputs per cycle and per hour, and where the ware is used.
+- **Load your save.** Pick a save file and every player-owned station is read in a few seconds: name, sector, production modules, the race recipe each module runs, its real efficiency (sunlight and workforce included), and the station's workforce. The file is read on your computer and never uploaded.
+- **Empire level.** Your estimated earnings per hour put you on one of twenty levels, from **Space Toddler** to **Super Mega Duper Huge Empire** (a trillion credits per hour), with progress to the next one. Every level has its own badge: iron, bronze, silver, gold and platinum frames with a level icon, and a gold crown on level 20. Your badge sits in the top bar, and the Empire view shows the whole ladder.
+- **Per-station earnings.** The Empire view lists every station with its estimated value per hour. Open one to see each module group (count, efficiency, output, value) and what the station has to ship in and out.
+- **Production chains as a diagram.** Every input of a ware, tier by tier, down to raw materials, sized for the output you want, in modules or units per hour. Each node shows modules needed versus built and flags shortfalls. Hover a node to see how much flows along each connection.
+- **Race recipes.** Teladi Hull Parts, Terran Energy Cells and the other race variants use their own inputs and yields wherever your save says they are in use. The details panel lists every recipe.
+- **Energy Cells with sunlight.** Solar output scales with each sector's sunlight, taken from the game files.
+- **My network.** Supply and demand per hour across everything you have built, shortfalls first, each with a one-click fix. Also suggests what to build next, ranked by how few new inputs it needs.
+- **Manual mode still works.** Without a save you can tick wares and enter module counts by hand, and export or import them as a JSON file.
 
 ## Getting started
 
 1. Download or clone this repository.
 2. Double-click `index.html`.
+3. Click **Load save** and pick your newest save. On Windows saves live in `Documents\Egosoft\X4\<number>\save`, for example `quicksave.xml.gz`. On Linux they are in `~/.config/EgoSoft/X4/<number>/save`.
 
 ### Using it
 
-1. **Find a ware** in the left list (press `/` to jump to search). Use **Built** to show only what you have marked.
-2. **Click its name** to open its chain. Set the target at the top, in modules or per hour.
-3. **Read a node:** the big number is the hourly rate the target needs, the line below says how many modules that takes and how many you have.
-4. **Hover a node** to see what flows in and out of it. **Click a node** for full details (`Esc` closes them).
-5. **Mark what you have built** with the tick and count in the list, or the plus and count on a node.
-6. **Open My network** at the bottom for supply and demand across everything you have built, and for build suggestions.
-7. **Export** saves your data to a file, **Import** loads it, **Reset** clears it (asks once more before it does).
+- **Empire** (top bar): your level, estimated earnings, and every station. Click a station to open it.
+- **Planner**: find a ware in the left list (press `/` to search), click its name, and set a target. Each node shows the hourly rate needed and the modules needed versus built.
+- **Click any node or ware** for full details (`Esc` closes them).
+- **My network** (bottom): supply and demand across everything you have built.
+- Load a newer save whenever you have played more. Built counts you change by hand afterwards are kept on top of the save until the next load.
+
+### How earnings are estimated
+
+Each module's value is what it makes per hour at the ware's average price, minus what it uses per hour at the inputs' average prices. A station's figure is the sum of its modules, and the empire figure is the sum of everything you have built. It assumes everything sells and every input is bought at average price. That makes it a good way to compare stations and track growth, not an exact credit forecast.
 
 ## Data & credits
 
-Ware and recipe data (prices, cycle times, batch sizes, production inputs, storage types) was sourced from [Roguey's X4 site](https://roguey.co.uk/x4/wares/), a community-maintained reference kept current with the live game patch. This project's code is an original implementation, not a copy or fork of any other X4 planning tool.
+All ware, recipe, module and sector data is read from the X4: Foundations 9.00 game files (base game plus official DLC) by `tools/build_data.py`. Earlier versions used figures from [Roguey's X4 site](https://roguey.co.uk/x4/wares/), which matched the game files on every shared ware. This project's code is an original implementation, not a copy or fork of any other X4 tool.
 
-Fonts are [Red Hat Text and Red Hat Mono](https://github.com/RedHatOfficial/RedHatFont), bundled in `fonts/` under the SIL Open Font License (`fonts/OFL.txt`). Icons are from [Phosphor Icons](https://phosphoricons.com) (MIT).
+Fonts are [Red Hat Text and Red Hat Mono](https://github.com/RedHatOfficial/RedHatFont), bundled in `fonts/` under the SIL Open Font License (`fonts/OFL.txt`). Icons, including the badge icons, are from [Phosphor Icons](https://phosphoricons.com) (MIT).
 
 ## For developers
 
-No build tooling. It is vanilla HTML/CSS/JS, kept that way on purpose so it always works by double-clicking the file.
+No build tooling for the app. It is vanilla HTML/CSS/JS, kept that way on purpose so it always works by double-clicking the file.
 
 **Files**
 
 - `index.html` / `style.css`: layout and theme (design tokens at the top of `style.css`)
 - `app.js`: all app logic. One `refresh()` re-renders every surface from `state` after any change.
-- `data/wares.js`: the ware database (58 wares), loaded as a plain `<script>` tag so it works from a `file://` page with no fetch
-- `data/wares.json`: the same data as plain JSON, the source of truth for tooling. If you edit it, regenerate `wares.js`:
+- `badges.js`: draws the 20 level badges as SVG (tier, frame, icon, pips).
+- `savegame.js`: the save reader. It streams and unpacks the gzipped save and scans it line by line, because saves are 500 MB to 1 GB of XML. It also runs in Node for testing.
+- `data/wares.js`: generated data, loaded as a plain `<script>` so it works from a `file://` page: `WARES_DATA`, `MODULE_MACROS` (module macro to ware and recipe) and `SECTORS` (name and sunlight)
+- `data/wares.json`: the same data as plain JSON
+- `tools/build_data.py`, `tools/x4cat.py`: regenerate the data from your own install after a game patch:
   ```bash
-  python3 -c "import json; d=json.load(open('data/wares.json',encoding='utf-8')); open('data/wares.js','w',encoding='utf-8').write('const WARES_DATA = '+json.dumps(d,indent=2)+';\n')"
+  X4_GAME_DIR="D:/SteamLibrary/steamapps/common/X4 Foundations" python tools/build_data.py
   ```
 - `fonts/`: self-hosted webfonts and their licence
 
-**Data model** (one entry per ware in `wares.json`):
+**Data model** (one entry per ware):
 
 ```jsonc
-"refinedmetals": {
-  "id": "refinedmetals",
-  "label": "Refined Metals",
-  "category": "Refined",       // Roguey's subtype grouping
-  "price": { "min": 89, "avg": 148, "max": 207 },
-  "volume": 14,
-  "cycleTime": 150,             // seconds per production cycle
-  "batchSize": 88,              // units produced per cycle
-  "tier": 1,                    // computed: 1 + max(tier of inputs), tier 0 = no ware inputs
-  "storageType": "Container",   // Solid, Liquid, or Container (X4's own storage classes)
-  "isMined": false,             // true only for the 7 wares actually mined/harvested by ships
-  "inputs": [
-    { "wareID": "energycells", "amount": 90 },
-    { "wareID": "ore", "amount": 240 }
-  ]
+"hullparts": {
+  "id": "hullparts",
+  "label": "Hull Parts",
+  "category": "Hightech",
+  "price": { "min": 146, "avg": 209, "max": 272 },
+  "volume": 12,
+  "storageType": "Container",   // Solid, Liquid, Container (X4's storage classes)
+  "isMined": false,             // true only for wares gathered by ships
+  "tier": 2,                    // 1 + max(tier of inputs); 0 = no ware inputs
+  "recipes": {                  // every recipe a player module can run
+    "default": { "time": 900, "amount": 294, "inputs": [...], "work": 0.37, "sunlight": false },
+    "teladi":  { "time": 900, "amount": 294, "inputs": [...], "work": 0.37, "sunlight": false }
+  },
+  "mainMethod": "default",      // recipe the planner uses for chains
+  "cycleTime": 900, "batchSize": 294, "inputs": [...]   // copy of the main recipe
 }
 ```
 
-Tier 0 (`inputs: []`) is not the same thing as "mined". Ore, Silicon, Ice, Helium, Hydrogen, Methane, and Raw Scrap are tier 0 *and* `isMined: true`. Energy Cells is also tier 0 (a Solar Power Plant needs no material inputs) but `isMined: false`: it is a real built module with no `cycleTime`/`batchSize` on record, because X4 generates it from sunlight rather than a fixed recipe. The UI uses `isMined`, not `tier`, to decide whether a ware gets a plain "I have a source" tick or a module count. Wares without a production rate cannot contribute a supply number, so in the network view their tick counts as "covered".
+Tier 0 is not the same thing as "mined". Energy Cells is tier 0 (a Solar Power Plant needs no material inputs) but is a real built module with a sunlight-scaled rate. The UI uses `isMined`, not `tier`, to decide whether a ware gets a plain "I have a source" tick or a module count.
 
-**Saved data** lives in `localStorage` under `x4-factories-planner:module-counts` (built modules) and `x4-factories-planner:ui` (open chain, target, panel state). If storage is unavailable the app still works, it just does not remember.
+**Saved data** lives in `localStorage`: `x4-factories-planner:module-counts` (built modules), `x4-factories-planner:empire` (stations read from the last save) and `x4-factories-planner:ui` (open chain, target, view). If storage is unavailable the app still works, it just does not remember.
 
-**Caching note**: if you edit `index.html`, `style.css`, or `app.js` and a reload does not pick up the change, your browser is serving a cached copy. Bump the `?v=15` query string on the `<link>`/`<script>` tags in `index.html` to the next number.
+**Caching note**: if you edit the app's files and a reload does not pick up the change, bump the `?v=20` query string on the `<link>`/`<script>` tags in `index.html`.
 
 ## Known limitations
 
-- **No alternate recipes.** X4 has multiple production *methods* for some wares (e.g. Teladi vs. Universal), each with different inputs. This build models one canonical recipe per ware. To add methods, change `inputs` on a ware to `methods: [{ name, race, inputs }]` and update `computeChain()` in `app.js` to pick a method per ware.
-- **No station module info** (build cost, workforce, race requirements).
-- **Built for a desktop window.** Narrow windows still work (panels overlay or scroll), but it is not a phone layout.
+- **Chains use the standard recipe.** Race recipes are applied to modules read from your save, but the chain diagram plans with each ware's standard recipe.
+- **Scrap recyclers are not modelled.** They have no fixed recipe, so a save import skips them and says so.
+- **Earnings are estimates** at average prices (see above). Hand-entered modules count at 100% efficiency; modules from a save use the efficiency the game recorded.
+- **Built for a desktop window.** Narrow windows still work, but it is not a phone layout.
 
 ## Contributing
 
