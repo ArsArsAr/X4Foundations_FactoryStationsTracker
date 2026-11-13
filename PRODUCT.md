@@ -25,7 +25,8 @@ Used alongside an active X4: Foundations play session, most likely a second wind
 ## Capabilities and Constraints
 
 - Save import: the player picks an X4 save (`.xml.gz` or plain `.xml`, 500 MB to 1 GB unpacked); `savegame.js` streams and scans it in the browser in a few seconds and nothing is uploaded. It reads every player-owned station's name, sector, production modules (with recipe and recorded efficiency), habitats and workforce. Imported built counts replace hand-entered ones; hand edits afterwards are layered on top until the next load.
-- Gamification: estimated empire earnings per hour (value added at average prices) map to twenty playful levels, from Space Toddler to Super Mega Duper Huge Empire (level 10 is a billion credits per hour, level 20 a trillion), shown as a badge. It is deliberately a flattering estimate, not a credit forecast.
+- Gamification: estimated empire earnings per hour (value added at average prices) map to twenty playful levels, from Space Toddler to Super Mega Duper Huge Empire (level 10 is a billion credits per hour, level 20 a trillion), shown as a badge. It is deliberately a flattering estimate, not a credit forecast. Unreached levels stay hidden until crossed (with a reveal); fifteen achievements and a PNG share card add to it.
+- Empire health: the save also gives production state and shortages, stock, storage, trade offers and every NPC trade offer, so the Empire view flags stalls, low stock, full storage and missing workers, compares the player's prices with their own universe's market, and lets them plan module changes per station with cost, payback and new shortfalls.
 
 - Must keep working as a zero-install, double-clicked `file://` page — no server dependency for core functionality. This was an explicit, confirmed hard constraint.
 - No network dependency at all: fonts (Red Hat Text / Red Hat Mono, OFL) are self-hosted in `fonts/` and icons are inlined, so the app is fully offline.

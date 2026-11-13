@@ -61,6 +61,11 @@ const state = {
   view: "planner",         // "planner" | "empire"
   empire: null,            // stations read from a save, see importSave()
   openStation: null,       // expanded station row in the empire view
+  empireTab: "overview",   // "overview" | "stations" | "prices" | "rewards"
+  plan: {},                // what-if: stationID -> { "ware|method": module delta }
+  chainRace: "default",    // recipe family the chain plans with
+  chainSunlight: 1,        // sunlight for solar modules in the chain
+  chainSector: "",         // sector macro the sunlight came from ("" = 100%)
   filter: "all",           // "all" | "built"
   query: "",
   collapsed: new Set(),    // collapsed sidebar tiers
@@ -79,6 +84,11 @@ const ICON_PATHS = {
   "arrow-right": "M221.66,133.66l-72,72a8,8,0,0,1-11.32-11.32L196.69,136H40a8,8,0,0,1,0-16H196.69L138.34,61.66a8,8,0,0,1,11.32-11.32l72,72A8,8,0,0,1,221.66,133.66Z",
   "arrow-counter-clockwise": "M224,128a96,96,0,0,1-94.71,96H128A95.38,95.38,0,0,1,62.1,197.8a8,8,0,0,1,11-11.63A80,80,0,1,0,71.43,71.39a3.07,3.07,0,0,1-.26.25L44.59,96H72a8,8,0,0,1,0,16H24a8,8,0,0,1-8-8V56a8,8,0,0,1,16,0V85.8L60.25,60A96,96,0,0,1,224,128Z",
   "folder-open": "M245,110.64A16,16,0,0,0,232,104H216V88a16,16,0,0,0-16-16H130.67L102.94,51.2a16.14,16.14,0,0,0-9.6-3.2H40A16,16,0,0,0,24,64V208h0a8,8,0,0,0,8,8H211.1a8,8,0,0,0,7.59-5.47l28.49-85.47A16.05,16.05,0,0,0,245,110.64ZM93.34,64,123.2,86.4A8,8,0,0,0,128,88h72v16H69.77a16,16,0,0,0-15.18,10.94L40,158.7V64Zm112,136H43.1l26.67-80H232Z",
+  "image": "M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40Zm0,16V158.75l-26.07-26.06a16,16,0,0,0-22.63,0l-20,20-44-44a16,16,0,0,0-22.62,0L40,149.37V56ZM40,172l52-52,80,80H40Zm176,28H194.63l-36-36,20-20L216,181.38V200ZM144,100a12,12,0,1,1,12,12A12,12,0,0,1,144,100Z",
+  "share-fat": "M237.66,106.35l-80-80A8,8,0,0,0,144,32V72.35c-25.94,2.22-54.59,14.92-78.16,34.91-28.38,24.08-46.05,55.11-49.76,87.37a12,12,0,0,0,20.68,9.58h0c11-11.71,50.14-48.74,107.24-52V192a8,8,0,0,0,13.66,5.65l80-80A8,8,0,0,0,237.66,106.35ZM160,172.69V144a8,8,0,0,0-8-8c-28.08,0-55.43,7.33-81.29,21.8a196.17,196.17,0,0,0-36.57,26.52c5.8-23.84,20.42-46.51,42.05-64.86C99.41,99.77,127.75,88,152,88a8,8,0,0,0,8-8V51.32L220.69,112Z",
+  "warning": "M236.8,188.09,149.35,36.22h0a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM222.93,203.8a8.5,8.5,0,0,1-7.48,4.2H40.55a8.5,8.5,0,0,1-7.48-4.2,7.59,7.59,0,0,1,0-7.72L120.52,44.21a8.75,8.75,0,0,1,15,0l87.45,151.87A7.59,7.59,0,0,1,222.93,203.8ZM120,144V104a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,180Z",
+  "clock": "M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm64-88a8,8,0,0,1-8,8H128a8,8,0,0,1-8-8V72a8,8,0,0,1,16,0v48h48A8,8,0,0,1,192,128Z",
+  "trend-up": "M240,56v64a8,8,0,0,1-16,0V75.31l-82.34,82.35a8,8,0,0,1-11.32,0L96,123.31,29.66,189.66a8,8,0,0,1-11.32-11.32l72-72a8,8,0,0,1,11.32,0L136,140.69,212.69,64H168a8,8,0,0,1,0-16h64A8,8,0,0,1,240,56Z",
   "caret-right": "M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z",
 };
 
@@ -164,11 +174,57 @@ function perModule(w) {
   return w.batchSize && w.cycleTime ? (w.batchSize * 3600) / w.cycleTime : 0;
 }
 
+// The recipe a chain plans with: the chosen race variant where the ware
+// has one, otherwise its standard recipe.
+function methodOf(w) {
+  return w.recipes[state.chainRace] ? state.chainRace : w.mainMethod;
+}
+
+function recipeOf(w) {
+  return w.recipes[methodOf(w)] || null;
+}
+
+// units/hour one module makes in the open chain: chosen recipe, and the
+// chosen sector's sunlight for solar modules
+function chainPerModule(w) {
+  const r = recipeOf(w);
+  if (!r || !r.time) return 0;
+  return ((r.amount * 3600) / r.time) * (r.sunlight ? state.chainSunlight : 1);
+}
+
+// build cost of one production module (average price of the module ware)
+let moduleCostCache = null;
+function moduleCost(ware, method) {
+  if (!moduleCostCache) {
+    moduleCostCache = new Map();
+    for (const m of Object.values(MODULE_MACROS)) {
+      if (!m.cost) continue;
+      for (const key of [`${m.ware}|${m.method}`, m.ware]) {
+        if (!moduleCostCache.has(key) || moduleCostCache.get(key) > m.cost) moduleCostCache.set(key, m.cost);
+      }
+    }
+  }
+  return moduleCostCache.get(`${ware}|${method}`) || moduleCostCache.get(ware) || 0;
+}
+
+// value one module adds per hour at average prices, for payback maths
+function moduleValue(ware, method, efficiency = 1) {
+  return unitFlows({ ware, method: method || W[ware].mainMethod, count: 1, efficiency }).value;
+}
+
+function fmtHours(h) {
+  if (!Number.isFinite(h) || h < 0) return "never";
+  if (h < 1) return `${Math.max(1, Math.round(h * 60))} min`;
+  if (h < 48) return `${Math.round(h * 10) / 10} h`;
+  return `${Math.round(h / 24)} days`;
+}
+
 function plural(n, word) {
   return n === 1 ? word : word + "s";
 }
 
 function fmtRate(n) {
+  if (n < 0) return "-" + fmtRate(-n);
   if (n >= 100) return Math.round(n).toLocaleString("en-US");
   if (n >= 10) return (Math.round(n * 10) / 10).toLocaleString("en-US");
   return (Math.round(n * 100) / 100).toLocaleString("en-US");
@@ -262,6 +318,12 @@ function loadUI() {
     if (!ui) return null;
     state.networkOpen = !!ui.networkOpen;
     state.view = ui.view === "empire" ? "empire" : "planner";
+    if (["overview", "stations", "prices", "rewards"].includes(ui.empireTab)) state.empireTab = ui.empireTab;
+    if (typeof ui.chainRace === "string") state.chainRace = ui.chainRace;
+    if (ui.chainSector && SECTORS[ui.chainSector]) {
+      state.chainSector = ui.chainSector;
+      state.chainSunlight = SECTORS[ui.chainSector].sunlight;
+    }
     state.filter = ui.filter === "built" ? "built" : "all";
     state.collapsed = new Set(Array.isArray(ui.collapsed) ? ui.collapsed.map(Number) : []);
     return ui;
@@ -277,6 +339,9 @@ function saveUI() {
       targetRate: state.targetRate,
       networkOpen: state.networkOpen,
       view: state.view,
+      empireTab: state.empireTab,
+      chainRace: state.chainRace,
+      chainSector: state.chainSector,
       filter: state.filter,
       collapsed: [...state.collapsed],
     }));
@@ -344,7 +409,7 @@ function setCount(id, rawValue) {
 
 function selectWare(id, opts = {}) {
   const w = W[id];
-  const pm = perModule(w);
+  const pm = chainPerModule(w);
   state.selected = id;
 
   if (opts.rate > 0) state.targetRate = opts.rate;
@@ -488,7 +553,7 @@ function applyFilter() {
     cat.classList.toggle("force-open", !!q || state.filter === "built");
   }
 
-  document.querySelectorAll(".segmented button").forEach((btn) => {
+  document.querySelectorAll(".segmented button[data-filter]").forEach((btn) => {
     btn.setAttribute("aria-pressed", String(btn.dataset.filter === state.filter));
   });
 
@@ -514,7 +579,8 @@ function computeChain(rootID, targetRate) {
   (function collect(id) {
     if (involved.has(id)) return;
     involved.add(id);
-    for (const inp of W[id].inputs) collect(inp.wareID);
+    const r = recipeOf(W[id]);
+    for (const inp of r ? r.inputs : []) collect(inp.wareID);
   })(rootID);
 
   // an input always sits on a lower tier than its consumer, so walking
@@ -526,9 +592,11 @@ function computeChain(rootID, targetRate) {
   for (const id of ordered) {
     const w = W[id];
     const r = rate.get(id) || 0;
-    if (!r || !perModule(w)) continue;
-    const cyclesPerHour = r / w.batchSize;
-    for (const inp of w.inputs) {
+    const recipe = recipeOf(w);
+    if (!r || !chainPerModule(w)) continue;
+    // inputs are used per cycle; sunlight only changes the output of a cycle
+    const cyclesPerHour = r / (recipe.amount * (recipe.sunlight ? state.chainSunlight : 1));
+    for (const inp of recipe.inputs) {
       const flow = cyclesPerHour * inp.amount;
       rate.set(inp.wareID, (rate.get(inp.wareID) || 0) + flow);
       edges.push({ from: inp.wareID, to: id, flow });
@@ -537,9 +605,9 @@ function computeChain(rootID, targetRate) {
 
   const nodes = {};
   for (const id of involved) {
-    const pm = perModule(W[id]);
+    const pm = chainPerModule(W[id]);
     const r = rate.get(id) || 0;
-    nodes[id] = { id, rate: r, perModule: pm, modules: pm ? Math.ceil(r / pm - 1e-9) : null };
+    nodes[id] = { id, method: methodOf(W[id]), rate: r, perModule: pm, modules: pm ? Math.ceil(r / pm - 1e-9) : null };
   }
   return { nodes, edges };
 }
@@ -582,12 +650,13 @@ function renderChainBar() {
   if (!id) return;
 
   const w = W[id];
-  const pm = perModule(w);
+  const pm = chainPerModule(w);
   const built = getCount(id);
 
   els.chainName.textContent = w.label;
   const facts = [TIER_LABELS[w.tier] || "Tier " + w.tier, `${w.storageType.toLowerCase()} storage`];
-  if (pm) facts.push(`one module makes ${fmtRate(pm)} per hour${w.recipes[w.mainMethod].sunlight ? " at 100% sunlight" : ""}`);
+  const rootRecipe = recipeOf(w);
+  if (pm) facts.push(`one module makes ${fmtRate(pm)} per hour${rootRecipe.sunlight ? ` at ${fmtPercent(state.chainSunlight)} sunlight` : ""}`);
   else facts.push(w.isMined ? "mined, not built" : "no fixed production rate");
   els.chainSub.textContent = facts.join(", ");
 
@@ -602,6 +671,68 @@ function renderChainBar() {
   const matches = pm && built > 0 && Math.abs(state.targetRate - pm * built) < 0.01;
   els.targetMatch.hidden = !pm || built === 0 || matches;
   if (!els.targetMatch.hidden) els.targetMatch.textContent = `Use my ${built} built`;
+
+  renderChainOptions();
+}
+
+// Recipe family and sector sunlight for the open chain, plus what the
+// modules it needs would cost to build.
+function renderChainOptions() {
+  const chain = computeChain(state.selected, state.targetRate);
+  const ids = Object.keys(chain.nodes);
+
+  // offer only the race recipes that exist somewhere in this chain
+  const all = new Set();
+  (function walk(id, seen) {
+    if (seen.has(id)) return;
+    seen.add(id);
+    for (const [m, r] of Object.entries(W[id].recipes)) {
+      if (m !== W[id].mainMethod) all.add(m);
+      for (const i of r.inputs) walk(i.wareID, seen);
+    }
+  })(state.selected, new Set());
+  if (state.chainRace !== "default") all.add(state.chainRace);
+  const raceSel = $("chain-race");
+  $("chain-race-wrap").hidden = all.size === 0;
+  const raceOpts = [["default", "Standard"], ...[...all].sort().map((m) => [m, METHOD_LABEL[m] || m])];
+  const raceHTML = raceOpts.map(([v, l]) => `<option value="${v}">${l}</option>`).join("");
+  if (raceSel.dataset.html !== raceHTML) {
+    raceSel.innerHTML = raceHTML;
+    raceSel.dataset.html = raceHTML;
+  }
+  raceSel.value = state.chainRace;
+
+  const solar = ids.some((id) => (recipeOf(W[id]) || {}).sunlight);
+  $("chain-sun-wrap").hidden = !solar;
+  const sunSel = $("chain-sun");
+  if (solar && !sunSel.options.length) {
+    const sectors = Object.entries(SECTORS)
+      .filter(([, s]) => s.name)
+      .sort((a, b) => b[1].sunlight - a[1].sunlight || a[1].name.localeCompare(b[1].name));
+    sunSel.innerHTML = `<option value="">Any, at 100%</option>` +
+      sectors.map(([k, s]) => `<option value="${k}">${escapeHTML(s.name)} (${fmtPercent(s.sunlight)})</option>`).join("");
+  }
+  if (solar) sunSel.value = state.chainSector;
+
+  // build cost: everything the chain needs, and what is still missing
+  let fullN = 0, fullCost = 0, missN = 0, missCost = 0;
+  for (const id of ids) {
+    const n = chain.nodes[id];
+    if (!n.modules) continue;
+    const cost = moduleCost(id, n.method);
+    const missing = Math.max(0, n.modules - getCount(id));
+    fullN += n.modules;
+    fullCost += n.modules * cost;
+    missN += missing;
+    missCost += missing * cost;
+  }
+  const minedCost = ids.filter((id) => W[id].isMined).reduce((s, id) => s + chain.nodes[id].rate * W[id].price.avg, 0);
+  const value = state.targetRate * W[state.selected].price.avg - minedCost;
+  const n = (v) => `<strong class="num">${v}</strong>`;
+  let text = `Whole chain: ${n(fullN)} ${plural(fullN, "module")} for about ${n(fmtCredits(fullCost))} Cr, ` +
+    (missN ? `${n(missN)} still to build (about ${n(fmtCredits(missCost))} Cr).` : "all of it built.");
+  if (value > 0 && fullCost > 0) text += ` It adds about ${n(fmtCredits(value))} Cr/h and pays for itself in ${fmtHours(fullCost / value)}.`;
+  $("chain-cost").innerHTML = text;
 }
 
 function setTargetRate(rate) {
@@ -610,7 +741,7 @@ function setTargetRate(rate) {
 }
 
 function stepTargetModules(direction) {
-  const pm = perModule(W[state.selected]);
+  const pm = chainPerModule(W[state.selected]);
   if (!pm) return;
   const modules = state.targetRate / pm;
   const next = direction > 0 ? Math.floor(modules + 1e-9) + 1 : Math.max(1, Math.ceil(modules - 1e-9) - 1);
@@ -995,7 +1126,14 @@ function allTransitiveInputs(id) {
 function computeSuggestions() {
   return Object.values(W)
     .filter((w) => !w.isMined && !isBuilt(w.id))
-    .map((w) => ({ id: w.id, missing: [...allTransitiveInputs(w.id)].filter((id) => !isBuilt(id)) }))
+    .map((w) => {
+      const missing = [...allTransitiveInputs(w.id)].filter((id) => !isBuilt(id));
+      // one module of it, plus one of each missing input that is built (not mined)
+      const cost = moduleCost(w.id, w.mainMethod) +
+        missing.filter((id) => !W[id].isMined).reduce((s, id) => s + moduleCost(id, W[id].mainMethod), 0);
+      const value = perModule(w) ? moduleValue(w.id) : 0;
+      return { id: w.id, missing, cost, value };
+    })
     .sort((a, b) => a.missing.length - b.missing.length || W[a.id].label.localeCompare(W[b.id].label));
 }
 
@@ -1085,7 +1223,8 @@ function renderNetwork() {
   els.suggestList.innerHTML = ranked.length
     ? ranked.map((r) => {
         const ready = r.missing.length === 0;
-        const sub = ready ? "Every input is covered" : "Still needs " + r.missing.map((id) => W[id].label).join(", ");
+        let sub = ready ? "Every input is covered" : "Still needs " + r.missing.map((id) => W[id].label).join(", ");
+        if (r.cost) sub += `. About ${fmtCredits(r.cost)} Cr to start${r.value > 0 ? `, one module adds ${fmtCredits(r.value)} Cr/h` : ""}`;
         return `<div class="net-row is-suggest">
           <span style="min-width:0">
             <button type="button" class="net-name" data-action="goto" data-id="${r.id}">${W[r.id].label}</button>
@@ -1095,282 +1234,6 @@ function renderNetwork() {
         </div>`;
       }).join("")
     : `<p class="quiet-note">Everything is built. Nothing left to suggest.</p>`;
-}
-
-/* ---------------------------------------------------------------------
-   Views, empire level, and the empire (stations) view
---------------------------------------------------------------------- */
-
-const METHOD_LABEL = {
-  teladi: "Teladi", terran: "Terran", boron: "Boron", paranid: "Paranid",
-  split: "Split", argon: "Argon", recycling: "Recycling",
-};
-
-function setView(view) {
-  state.view = view;
-  refresh();
-}
-
-function renderView() {
-  const empire = state.view === "empire";
-  els.chainView.hidden = empire;
-  els.empireView.hidden = !empire;
-  document.querySelectorAll(".view-switch button").forEach((b) => {
-    b.setAttribute("aria-pressed", String(b.dataset.view === state.view));
-  });
-}
-
-function badgeHTML(index, size) {
-  return X4Badges.badgeSVG(index, size, `Level ${index + 1}: ${LEVELS[index].name}`);
-}
-
-function renderRank() {
-  const profit = empireProfit();
-  const { index, level } = levelFor(profit);
-  const hasData = state.moduleCounts.size > 0;
-  els.rankChip.hidden = !hasData;
-  if (hasData) {
-    els.rankChip.innerHTML = `${badgeHTML(index, 30)}<span class="rank-chip-num num">${index + 1}</span><span class="rank-chip-name">${level.name}</span>`;
-    els.rankChip.title = `Level ${index + 1}: ${level.name}, about ${fmtCredits(profit)} Cr per hour. Click for details.`;
-  }
-}
-
-function renderEmpire() {
-  if (state.view !== "empire") return;
-
-  const profit = empireProfit();
-  const { index, level, next } = levelFor(profit);
-
-  els.rankBadge.innerHTML = badgeHTML(index, 124);
-  els.rankLevel.textContent = `Level ${index + 1} of ${LEVELS.length}`;
-  els.rankName.textContent = level.name;
-  els.rankFlavor.textContent = level.flavor;
-  els.rankProfit.textContent = fmtCredits(Math.max(0, profit));
-  els.rankDay.textContent = profit > 0
-    ? `About ${fmtCredits(profit * 24)} Cr per in-game day, estimated from average prices.`
-    : "Track some production modules to start earning a rank.";
-  if (next) {
-    const span = next.min - level.min;
-    const done = Math.min(1, Math.max(0, (profit - level.min) / span));
-    els.rankNext.innerHTML = `
-      <div class="rank-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(done * 100)}" aria-label="Progress to ${next.name}"><span style="transform:scaleX(${done})"></span></div>
-      <p>${fmtCredits(next.min - profit)} Cr per hour more to reach <strong>${next.name}</strong></p>`;
-  } else {
-    els.rankNext.innerHTML = `<p>Top level. There is nowhere left to go but sideways.</p>`;
-  }
-
-  renderLadder(index);
-  renderEmpireSource();
-  renderStations();
-}
-
-function renderLadder(current) {
-  els.levelLadder.innerHTML = LEVELS.map((lvl, i) => {
-    const cls = i === current ? "is-current" : i < current ? "is-reached" : "is-locked";
-    return `<li class="${cls}"${i === current ? ' aria-current="step"' : ""}>
-      ${badgeHTML(i, 58)}
-      <span class="ladder-num">Level ${i + 1}</span>
-      <span class="ladder-name">${lvl.name}</span>
-      <span class="ladder-min num">${i === 0 ? "start" : fmtCredits(lvl.min) + "/h"}</span>
-    </li>`;
-  }).join("");
-}
-
-function renderEmpireSource() {
-  if (state.importing) {
-    const pct = Math.round(state.importing.progress * 100);
-    els.empireSource.innerHTML = `
-      <div class="source-text">
-        <h2>Reading ${state.importing.fileName}</h2>
-        <p class="quiet-note">Unpacking and scanning on this computer. Large saves take a little while.</p>
-      </div>
-      <div class="load-progress"><div class="rank-bar"><span style="transform:scaleX(${state.importing.progress})"></span></div><span class="num">${pct}%</span></div>`;
-    return;
-  }
-
-  const e = state.empire;
-  if (!e) {
-    els.empireSource.innerHTML = `
-      <div class="source-text">
-        <h2>Load your empire from a save</h2>
-        <p>X4 keeps saves in <code>Documents\\Egosoft\\X4\\&lt;number&gt;\\save</code>. Pick the newest one, for example <code>quicksave.xml.gz</code>. It is read on this computer and never uploaded.</p>
-        <p class="quiet-note">Your stations, their modules, race recipes, sunlight and workforce come straight from the save. Built counts you entered by hand are replaced.</p>
-      </div>
-      <button type="button" class="btn is-primary" data-action="load-save">${icon("folder-open")}Load save</button>`;
-    return;
-  }
-
-  const moduleTotal = e.stations.reduce((s, st) => s + st.modules.reduce((a, m) => a + m.count, 0), 0);
-  const when = e.savedAt ? new Date(e.savedAt * 1000).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "unknown date";
-  els.empireSource.innerHTML = `
-    <div class="source-text">
-      <h2>${e.saveName ? `From "${escapeHTML(e.saveName)}"` : "From your save"}</h2>
-      <p class="quiet-note">Saved ${when}. ${e.stations.length} ${plural(e.stations.length, "station")}, ${moduleTotal} production ${plural(moduleTotal, "module")}${e.skipped ? `, ${e.skipped} other ${plural(e.skipped, "module")} skipped` : ""}.</p>
-    </div>
-    <div class="source-actions">
-      <button type="button" class="btn" data-action="load-save">${icon("folder-open")}Load newer save</button>
-      <button type="button" class="btn" data-action="forget-save" title="Keep your built counts, drop the station details">Forget save</button>
-    </div>`;
-}
-
-function renderStations() {
-  const e = state.empire;
-  if (!e) {
-    els.stationsNote.textContent = "";
-    els.stationList.innerHTML = `<p class="quiet-note">Load a save to see every station you own, what it makes and roughly what it earns.</p>`;
-    return;
-  }
-
-  const rows = e.stations
-    .map((st) => ({ st, profit: stationProfit(st), modules: st.modules.reduce((a, m) => a + m.count, 0) }))
-    .sort((a, b) => b.profit - a.profit || b.modules - a.modules);
-
-  els.stationsNote.textContent = "Estimated value added per hour: output at average price minus inputs at average price.";
-  els.stationList.innerHTML = `
-    <div class="st-row st-head"><span></span><span>Station</span><span>Sector</span><span>Modules</span><span>Workforce</span><span>Per hour</span></div>
-    ${rows.map(({ st, profit, modules }) => {
-      const open = state.openStation === st.id;
-      return `
-      <div class="st-item${open ? " is-open" : ""}">
-        <button type="button" class="st-row" data-action="toggle-station" data-id="${escapeHTML(st.id)}" aria-expanded="${open}">
-          <span class="st-caret">${icon("caret-right", 12)}</span>
-          <span class="st-name">${escapeHTML(stationLabel(st))}${st.underConstruction ? ` <span class="tag is-plain">building</span>` : ""}</span>
-          <span class="st-sector" title="Sunlight ${fmtPercent(st.sunlight)}">${escapeHTML(st.sectorName)}</span>
-          <span class="num">${modules || "none"}</span>
-          <span class="num dim">${st.workforce ? st.workforce.toLocaleString("en-US") : "none"}</span>
-          <span class="num ${profit > 0 ? "is-ok" : profit < 0 ? "is-short" : "dim"}">${modules ? fmtCredits(profit) : "none"}</span>
-        </button>
-        ${open ? stationDetail(st) : ""}
-      </div>`;
-    }).join("")}`;
-}
-
-function stationDetail(st) {
-  if (!st.modules.length) {
-    return `<div class="st-detail"><p class="quiet-note">No production modules. Docks, storage, defence or trade only.</p></div>`;
-  }
-
-  const net = new Map();
-  const groups = st.modules
-    .map((m) => ({ m, f: unitFlows(m) }))
-    .sort((a, b) => b.f.value - a.f.value);
-  for (const { m, f } of groups) {
-    net.set(m.ware, (net.get(m.ware) || 0) + f.made);
-    for (const i of f.uses) net.set(i.ware, (net.get(i.ware) || 0) - i.amount);
-  }
-  const inbound = [...net].filter(([, v]) => v < -1e-6).sort((a, b) => a[1] - b[1]);
-  const outbound = [...net].filter(([, v]) => v > 1e-6).sort((a, b) => b[1] - a[1]);
-  const flowList = (list) => list.length
-    ? list.map(([id, v]) => `<button type="button" class="link-row" data-action="inspect" data-id="${id}"><span class="name">${W[id].label}</span><span></span><span class="num">${fmtRate(Math.abs(v))}/h</span></button>`).join("")
-    : `<p class="quiet-note">Nothing.</p>`;
-
-  return `
-    <div class="st-detail">
-      <div class="st-modules">
-        <div class="mod-row mod-head"><span>Module</span><span>Count</span><span>Efficiency</span><span>Makes</span><span>Value</span></div>
-        ${groups.map(({ m, f }) => `
-          <div class="mod-row">
-            <button type="button" class="net-name" data-action="inspect" data-id="${m.ware}">${W[m.ware].label}${METHOD_LABEL[m.method] ? ` <span class="method">${METHOD_LABEL[m.method]}</span>` : ""}</button>
-            <span class="num">${m.count}</span>
-            <span class="num dim" title="Includes sunlight and the workforce bonus">${fmtPercent(m.efficiency)}</span>
-            <span class="num">${fmtRate(f.made)}/h</span>
-            <span class="num ${f.value >= 0 ? "is-ok" : "is-short"}">${fmtCredits(f.value)}</span>
-          </div>`).join("")}
-      </div>
-      <div class="st-flows">
-        <section><h3>Ships in</h3>${flowList(inbound)}</section>
-        <section><h3>Ships out</h3>${flowList(outbound)}</section>
-      </div>
-    </div>`;
-}
-
-function escapeHTML(s) {
-  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
-}
-
-/* ---------------------------------------------------------------------
-   Save import
---------------------------------------------------------------------- */
-
-async function importSave(file) {
-  if (state.importing) return;
-  state.importing = { progress: 0, fileName: file.name };
-  state.view = "empire";
-  refresh();
-
-  let lastPaint = 0;
-  const onProgress = (p) => {
-    state.importing.progress = p;
-    const now = performance.now();
-    if (now - lastPaint > 120) {
-      lastPaint = now;
-      renderEmpireSource();
-    }
-  };
-
-  try {
-    const { stations, info } = await X4Save.readFile(file, onProgress);
-    if (!stations.length && !info.version) {
-      throw new Error("it does not look like an X4 save file");
-    }
-
-    let skipped = 0;
-    const converted = stations.map((s, i) => {
-      const sector = SECTORS[s.sector] || null;
-      const groups = new Map();
-      for (const m of s.modules) {
-        const mapped = MODULE_MACROS[m.macro];
-        if (!m.built || !mapped) {
-          skipped++;
-          continue;
-        }
-        const recipe = W[mapped.ware].recipes[mapped.method];
-        // modules idle when the game saved store no efficiency; assume
-        // sunlight for solar and 100% for everything else
-        const eff = m.efficiency != null ? m.efficiency : recipe.sunlight ? (sector ? sector.sunlight : 1) : 1;
-        const key = `${mapped.ware}|${mapped.method}`;
-        if (!groups.has(key)) groups.set(key, { ware: mapped.ware, method: mapped.method, count: 0, effSum: 0 });
-        const g = groups.get(key);
-        g.count++;
-        g.effSum += eff;
-      }
-      return {
-        id: s.code || `station-${i}`,
-        name: s.name,
-        code: s.code,
-        sectorName: sector ? sector.name : "Unknown sector",
-        sunlight: sector ? sector.sunlight : 1,
-        workforce: s.workforce,
-        habitats: s.habitats,
-        underConstruction: s.underConstruction,
-        modules: [...groups.values()].map((g) => ({ ware: g.ware, method: g.method, count: g.count, efficiency: g.effSum / g.count })),
-      };
-    });
-
-    // built counts now come from the save; "I have a source" ticks on mined wares stay
-    for (const id of [...state.moduleCounts.keys()]) if (!W[id].isMined) state.moduleCounts.delete(id);
-    for (const st of converted) for (const m of st.modules) state.moduleCounts.set(m.ware, getCount(m.ware) + m.count);
-
-    state.empire = {
-      saveName: info.name || file.name,
-      savedAt: Number(info.date) || null,
-      importedAt: Date.now(),
-      skipped,
-      stations: converted,
-    };
-    state.openStation = null;
-    saveCounts();
-    saveEmpire();
-
-    const moduleTotal = converted.reduce((s, st) => s + st.modules.reduce((a, m) => a + m.count, 0), 0);
-    setStatus(`Loaded ${converted.length} ${plural(converted.length, "station")} and ${moduleTotal} production ${plural(moduleTotal, "module")}.`);
-  } catch (e) {
-    console.error(e);
-    setStatus(`Could not read that save: ${e.message || e}.`);
-  } finally {
-    state.importing = null;
-    refresh();
-  }
 }
 
 /* ---------------------------------------------------------------------
@@ -1441,6 +1304,7 @@ function handleReset() {
   disarmReset();
   state.moduleCounts.clear();
   state.empire = null;
+  state.plan = {};
   saveCounts();
   saveEmpire();
   refresh();
@@ -1457,7 +1321,7 @@ function bindEvents() {
     applyFilter();
   });
 
-  document.querySelectorAll(".segmented button").forEach((btn) => {
+  document.querySelectorAll(".segmented button[data-filter]").forEach((btn) => {
     btn.addEventListener("click", () => {
       state.filter = btn.dataset.filter;
       applyFilter();
@@ -1467,15 +1331,30 @@ function bindEvents() {
 
   // target controls
   els.targetModules.addEventListener("change", () => {
-    const pm = perModule(W[state.selected]);
+    const pm = chainPerModule(W[state.selected]);
     setTargetRate((Number(els.targetModules.value) || 1) * pm);
   });
   els.targetRate.addEventListener("change", () => setTargetRate(els.targetRate.value));
   els.targetDec.addEventListener("click", () => stepTargetModules(-1));
   els.targetInc.addEventListener("click", () => stepTargetModules(1));
   els.targetMatch.addEventListener("click", () => {
-    setTargetRate(perModule(W[state.selected]) * getCount(state.selected));
+    setTargetRate(chainPerModule(W[state.selected]) * getCount(state.selected));
   });
+
+  // chain options: switching recipe or sunlight keeps the root's module count
+  const keepModules = (change) => {
+    const before = chainPerModule(W[state.selected]);
+    const modules = before ? state.targetRate / before : 0;
+    change();
+    const after = chainPerModule(W[state.selected]);
+    if (modules && after) state.targetRate = modules * after;
+    refresh();
+  };
+  $("chain-race").addEventListener("change", (e) => keepModules(() => (state.chainRace = e.target.value)));
+  $("chain-sun").addEventListener("change", (e) => keepModules(() => {
+    state.chainSector = e.target.value;
+    state.chainSunlight = e.target.value && SECTORS[e.target.value] ? SECTORS[e.target.value].sunlight : 1;
+  }));
 
   // chain nodes
   els.chainColumns.addEventListener("click", (e) => {
@@ -1532,33 +1411,6 @@ function bindEvents() {
     if (btn) selectWare(btn.dataset.id);
   });
 
-  // views and empire
-  document.querySelectorAll(".view-switch button").forEach((btn) => {
-    btn.addEventListener("click", () => setView(btn.dataset.view));
-  });
-  els.rankChip.addEventListener("click", () => setView("empire"));
-  els.loadSave.addEventListener("click", () => els.saveFile.click());
-  els.saveFile.addEventListener("change", () => {
-    if (els.saveFile.files[0]) importSave(els.saveFile.files[0]);
-    els.saveFile.value = "";
-  });
-  els.empireView.addEventListener("click", (e) => {
-    const btn = e.target.closest("[data-action]");
-    if (!btn) return;
-    const { action, id } = btn.dataset;
-    if (action === "load-save") els.saveFile.click();
-    else if (action === "forget-save") {
-      state.empire = null;
-      state.openStation = null;
-      saveEmpire();
-      refresh();
-      setStatus("Station details dropped. Your built counts are kept.");
-    } else if (action === "toggle-station") {
-      state.openStation = state.openStation === id ? null : id;
-      renderStations();
-    } else if (action === "inspect") inspect(id);
-  });
-
   // data
   els.exportData.addEventListener("click", exportData);
   els.importData.addEventListener("click", () => els.importFile.click());
@@ -1609,9 +1461,10 @@ function init() {
 
   buildSidebar();
   bindEvents();
+  bindEmpireEvents();
+  loadEmpireExtras();
 
   if (ui && ui.selected && W[ui.selected]) selectWare(ui.selected, { rate: Number(ui.targetRate) });
   else refresh();
 }
 
-init();

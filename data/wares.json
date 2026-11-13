@@ -3004,247 +3004,369 @@
  "modules": {
   "prod_arg_foodrations_macro": {
    "ware": "foodrations",
-   "method": "default"
+   "method": "default",
+   "workforce": 90,
+   "cost": 1677512
   },
   "prod_arg_meat_macro": {
    "ware": "meat",
-   "method": "default"
+   "method": "default",
+   "workforce": 75,
+   "cost": 1588056
   },
   "prod_arg_medicalsupplies_macro": {
    "ware": "medicalsupplies",
-   "method": "default"
+   "method": "default",
+   "workforce": 90,
+   "cost": 1439418
   },
   "prod_arg_spacefuel_macro": {
    "ware": "spacefuel",
-   "method": "default"
+   "method": "default",
+   "workforce": 225,
+   "cost": 2041378
   },
   "prod_arg_wheat_macro": {
    "ware": "wheat",
-   "method": "default"
+   "method": "default",
+   "workforce": 75,
+   "cost": 1894304
   },
   "prod_bor_bofu_macro": {
    "ware": "bofu",
-   "method": "default"
+   "method": "default",
+   "workforce": 125,
+   "cost": 1845263
   },
   "prod_bor_bogas_macro": {
    "ware": "bogas",
-   "method": "default"
+   "method": "default",
+   "workforce": 100,
+   "cost": 1746862
   },
   "prod_bor_medicalsupplies_macro": {
    "ware": "medicalsupplies",
-   "method": "boron"
+   "method": "boron",
+   "workforce": 90,
+   "cost": 1583360
   },
   "prod_bor_plankton_macro": {
    "ware": "plankton",
-   "method": "default"
+   "method": "default",
+   "workforce": 40,
+   "cost": 1083734
   },
   "prod_gen_advancedcomposites_macro": {
    "ware": "advancedcomposites",
-   "method": "default"
+   "method": "default",
+   "workforce": 315,
+   "cost": 4146948
   },
   "prod_gen_advancedelectronics_macro": {
    "ware": "advancedelectronics",
-   "method": "default"
+   "method": "default",
+   "workforce": 540,
+   "cost": 3085608
   },
   "prod_gen_antimattercells_macro": {
    "ware": "antimattercells",
-   "method": "default"
+   "method": "default",
+   "workforce": 180,
+   "cost": 441738
   },
   "prod_gen_antimatterconverters_macro": {
    "ware": "antimatterconverters",
-   "method": "default"
+   "method": "default",
+   "workforce": 1080,
+   "cost": 11390056
   },
   "prod_gen_claytronics_macro": {
    "ware": "claytronics",
-   "method": "default"
+   "method": "default",
+   "workforce": 1215,
+   "cost": 18055920
   },
   "prod_gen_dronecomponents_macro": {
    "ware": "dronecomponents",
-   "method": "default"
+   "method": "default",
+   "workforce": 675,
+   "cost": 7837962
   },
   "prod_gen_energycells_macro": {
    "ware": "energycells",
-   "method": "default"
+   "method": "default",
+   "workforce": 90,
+   "cost": 1663316
   },
   "prod_gen_engineparts_macro": {
    "ware": "engineparts",
-   "method": "default"
+   "method": "default",
+   "workforce": 225,
+   "cost": 2490222
   },
   "prod_gen_fieldcoils_macro": {
    "ware": "fieldcoils",
-   "method": "default"
+   "method": "default",
+   "workforce": 810,
+   "cost": 11101966
   },
   "prod_gen_graphene_macro": {
    "ware": "graphene",
-   "method": "default"
+   "method": "default",
+   "workforce": 180,
+   "cost": 179960
   },
   "prod_gen_hullparts_macro": {
    "ware": "hullparts",
-   "method": "default"
+   "method": "default",
+   "workforce": 270,
+   "cost": 3929640
   },
   "prod_gen_microchips_macro": {
    "ware": "microchips",
-   "method": "default"
+   "method": "default",
+   "workforce": 450,
+   "cost": 4849964
   },
   "prod_gen_missilecomponents_macro": {
    "ware": "missilecomponents",
-   "method": "default"
+   "method": "default",
+   "workforce": 22,
+   "cost": 225462
   },
   "prod_gen_plasmaconductors_macro": {
    "ware": "plasmaconductors",
-   "method": "default"
+   "method": "default",
+   "workforce": 225,
+   "cost": 3026942
   },
   "prod_gen_quantumtubes_macro": {
    "ware": "quantumtubes",
-   "method": "default"
+   "method": "default",
+   "workforce": 225,
+   "cost": 2433120
   },
   "prod_gen_refinedmetals_macro": {
    "ware": "refinedmetals",
-   "method": "default"
+   "method": "default",
+   "workforce": 225,
+   "cost": 232036
   },
   "prod_gen_scanningarrays_macro": {
    "ware": "scanningarrays",
-   "method": "default"
+   "method": "default",
+   "workforce": 315,
+   "cost": 4026186
   },
   "prod_gen_scrap_recyclerkhaak_macro": {
    "ware": "khaakalloy",
-   "method": "recycling"
+   "method": "recycling",
+   "workforce": 1250,
+   "cost": 2299050
   },
   "prod_gen_shieldcomponents_macro": {
    "ware": "shieldcomponents",
-   "method": "default"
+   "method": "default",
+   "workforce": 225,
+   "cost": 2765164
   },
   "prod_gen_siliconwafers_macro": {
    "ware": "siliconwafers",
-   "method": "default"
+   "method": "default",
+   "workforce": 225,
+   "cost": 474624
   },
   "prod_gen_smartchips_macro": {
    "ware": "smartchips",
-   "method": "default"
+   "method": "default",
+   "workforce": 60,
+   "cost": 807700
   },
   "prod_gen_spices_macro": {
    "ware": "spices",
-   "method": "default"
+   "method": "default",
+   "workforce": 60,
+   "cost": 890050
   },
   "prod_gen_superfluidcoolant_macro": {
    "ware": "superfluidcoolant",
-   "method": "default"
+   "method": "default",
+   "workforce": 180,
+   "cost": 161270
   },
   "prod_gen_turretcomponents_macro": {
    "ware": "turretcomponents",
-   "method": "default"
+   "method": "default",
+   "workforce": 225,
+   "cost": 3040622
   },
   "prod_gen_water_macro": {
    "ware": "water",
-   "method": "default"
+   "method": "default",
+   "workforce": 180,
+   "cost": 230472
   },
   "prod_gen_weaponcomponents_macro": {
    "ware": "weaponcomponents",
-   "method": "default"
+   "method": "default",
+   "workforce": 225,
+   "cost": 2535208
   },
   "prod_par_majadust_macro": {
    "ware": "majadust",
-   "method": "default"
+   "method": "default",
+   "workforce": 123,
+   "cost": 2387086
   },
   "prod_par_majasnails_macro": {
    "ware": "majasnails",
-   "method": "default"
+   "method": "default",
+   "workforce": 175,
+   "cost": 1588056
   },
   "prod_par_medicalsupplies_macro": {
    "ware": "medicalsupplies",
-   "method": "paranid"
+   "method": "paranid",
+   "workforce": 90,
+   "cost": 1445976
   },
   "prod_par_sojabeans_macro": {
    "ware": "sojabeans",
-   "method": "default"
+   "method": "default",
+   "workforce": 175,
+   "cost": 1894304
   },
   "prod_par_sojahusk_macro": {
    "ware": "sojahusk",
-   "method": "default"
+   "method": "default",
+   "workforce": 99,
+   "cost": 2023220
   },
   "prod_spl_cheltmeat_macro": {
    "ware": "cheltmeat",
-   "method": "default"
+   "method": "default",
+   "workforce": 90,
+   "cost": 821398
   },
   "prod_spl_medicalsupplies_macro": {
    "ware": "medicalsupplies",
-   "method": "split"
+   "method": "split",
+   "workforce": 90,
+   "cost": 1439418
   },
   "prod_spl_scruffinfruit_macro": {
    "ware": "scruffinfruits",
-   "method": "default"
+   "method": "default",
+   "workforce": 90,
+   "cost": 976073
   },
   "prod_tel_advancedcomposites_macro": {
    "ware": "advancedcomposites",
-   "method": "teladi"
+   "method": "teladi",
+   "workforce": 315,
+   "cost": 4018840
   },
   "prod_tel_engineparts_macro": {
    "ware": "engineparts",
-   "method": "teladi"
+   "method": "teladi",
+   "workforce": 225,
+   "cost": 2521368
   },
   "prod_tel_hullparts_macro": {
    "ware": "hullparts",
-   "method": "teladi"
+   "method": "teladi",
+   "workforce": 270,
+   "cost": 3929384
   },
   "prod_tel_medicalsupplies_macro": {
    "ware": "medicalsupplies",
-   "method": "teladi"
+   "method": "teladi",
+   "workforce": 90,
+   "cost": 1434392
   },
   "prod_tel_nostropoil_macro": {
    "ware": "nostropoil",
-   "method": "default"
+   "method": "default",
+   "workforce": 120,
+   "cost": 1851914
   },
   "prod_tel_scanningarrays_macro": {
    "ware": "scanningarrays",
-   "method": "teladi"
+   "method": "teladi",
+   "workforce": 315,
+   "cost": 4076458
   },
   "prod_tel_spaceweed_macro": {
    "ware": "spaceweed",
-   "method": "default"
+   "method": "default",
+   "workforce": 90,
+   "cost": 4088282
   },
   "prod_tel_sunriseflowers_macro": {
    "ware": "sunriseflowers",
-   "method": "default"
+   "method": "default",
+   "workforce": 50,
+   "cost": 1895852
   },
   "prod_tel_swampplant_macro": {
    "ware": "swampplant",
-   "method": "default"
+   "method": "default",
+   "workforce": 50,
+   "cost": 4088282
   },
   "prod_tel_teladianium_macro": {
    "ware": "teladianium",
-   "method": "default"
+   "method": "default",
+   "workforce": 225,
+   "cost": 320976
   },
   "prod_ter_computronicsubstrate_macro": {
    "ware": "computronicsubstrate",
-   "method": "default"
+   "method": "default",
+   "workforce": 1500,
+   "cost": 4964793
   },
   "prod_ter_energycells_macro": {
    "ware": "energycells",
-   "method": "terran"
+   "method": "terran",
+   "workforce": 45,
+   "cost": 471369
   },
   "prod_ter_medicalsupplies_macro": {
    "ware": "medicalsupplies",
-   "method": "terran"
+   "method": "terran",
+   "workforce": 90,
+   "cost": 354431
   },
   "prod_ter_metallicmicrolattice_macro": {
    "ware": "metallicmicrolattice",
-   "method": "default"
+   "method": "default",
+   "workforce": 120,
+   "cost": 125481
   },
   "prod_ter_mre_macro": {
    "ware": "terranmre",
-   "method": "default"
+   "method": "default",
+   "workforce": 135,
+   "cost": 627371
   },
   "prod_ter_proteinpaste_macro": {
    "ware": "proteinpaste",
-   "method": "default"
+   "method": "default",
+   "workforce": 180,
+   "cost": 1521084
   },
   "prod_ter_siliconcarbide_macro": {
    "ware": "siliconcarbide",
-   "method": "default"
+   "method": "default",
+   "workforce": 750,
+   "cost": 834308
   },
   "prod_ter_stimulants_macro": {
    "ware": "stimulants",
-   "method": "default"
+   "method": "default",
+   "workforce": 300,
+   "cost": 2923177
   }
  },
  "sectors": {
@@ -4015,6 +4137,330 @@
   "timelines_map_weaken_station_cluster_001_sector_01_macro": {
    "name": "Pontifex's Claim",
    "sunlight": 1.94
+  }
+ },
+ "habitats": {
+  "hab_arg_l_01_macro": {
+   "capacity": 1000,
+   "race": "argon"
+  },
+  "hab_arg_m_01_macro": {
+   "capacity": 500,
+   "race": "argon"
+  },
+  "hab_arg_s_01_macro": {
+   "capacity": 250,
+   "race": "argon"
+  },
+  "hab_bor_l_01_macro": {
+   "capacity": 1000,
+   "race": "boron"
+  },
+  "hab_bor_m_01_macro": {
+   "capacity": 500,
+   "race": "boron"
+  },
+  "hab_bor_s_01_macro": {
+   "capacity": 250,
+   "race": "boron"
+  },
+  "hab_par_l_01_macro": {
+   "capacity": 999,
+   "race": "paranid"
+  },
+  "hab_par_m_01_macro": {
+   "capacity": 666,
+   "race": "paranid"
+  },
+  "hab_par_s_01_macro": {
+   "capacity": 333,
+   "race": "paranid"
+  },
+  "hab_pir_l_01_macro": {
+   "capacity": 1000,
+   "race": "argon"
+  },
+  "hab_pir_m_01_macro": {
+   "capacity": 500,
+   "race": "argon"
+  },
+  "hab_pir_s_01_macro": {
+   "capacity": 250,
+   "race": "argon"
+  },
+  "hab_spl_l_01_macro": {
+   "capacity": 1000,
+   "race": "split"
+  },
+  "hab_spl_m_01_macro": {
+   "capacity": 500,
+   "race": "split"
+  },
+  "hab_spl_s_01_macro": {
+   "capacity": 250,
+   "race": "split"
+  },
+  "hab_tel_l_01_macro": {
+   "capacity": 1000,
+   "race": "teladi"
+  },
+  "hab_tel_m_01_macro": {
+   "capacity": 500,
+   "race": "teladi"
+  },
+  "hab_tel_s_01_macro": {
+   "capacity": 250,
+   "race": "teladi"
+  },
+  "hab_ter_l_01_macro": {
+   "capacity": 500,
+   "race": "terran"
+  },
+  "hab_ter_m_01_macro": {
+   "capacity": 250,
+   "race": "terran"
+  },
+  "hab_ter_s_01_macro": {
+   "capacity": 100,
+   "race": "terran"
+  }
+ },
+ "storage": {
+  "storage_arg_l_container_01_macro": {
+   "capacity": 1000000,
+   "type": "container"
+  },
+  "storage_arg_l_liquid_01_macro": {
+   "capacity": 1000000,
+   "type": "liquid"
+  },
+  "storage_arg_l_solid_01_macro": {
+   "capacity": 1000000,
+   "type": "solid"
+  },
+  "storage_arg_l_tradestation_01_macro": {
+   "capacity": 300000,
+   "type": "container"
+  },
+  "storage_arg_m_container_01_macro": {
+   "capacity": 250000,
+   "type": "container"
+  },
+  "storage_arg_m_liquid_01_macro": {
+   "capacity": 500000,
+   "type": "liquid"
+  },
+  "storage_arg_m_solid_01_macro": {
+   "capacity": 500000,
+   "type": "solid"
+  },
+  "storage_arg_s_container_01_macro": {
+   "capacity": 50000,
+   "type": "container"
+  },
+  "storage_arg_s_liquid_01_macro": {
+   "capacity": 100000,
+   "type": "liquid"
+  },
+  "storage_arg_s_solid_01_macro": {
+   "capacity": 100000,
+   "type": "solid"
+  },
+  "storage_bor_l_container_01_macro": {
+   "capacity": 1000000,
+   "type": "container"
+  },
+  "storage_bor_l_liquid_01_macro": {
+   "capacity": 1000000,
+   "type": "liquid"
+  },
+  "storage_bor_l_solid_01_macro": {
+   "capacity": 1000000,
+   "type": "solid"
+  },
+  "storage_bor_m_container_01_macro": {
+   "capacity": 250000,
+   "type": "container"
+  },
+  "storage_bor_m_liquid_01_macro": {
+   "capacity": 500000,
+   "type": "liquid"
+  },
+  "storage_bor_m_solid_01_macro": {
+   "capacity": 500000,
+   "type": "solid"
+  },
+  "storage_bor_s_container_01_macro": {
+   "capacity": 50000,
+   "type": "container"
+  },
+  "storage_bor_s_liquid_01_macro": {
+   "capacity": 100000,
+   "type": "liquid"
+  },
+  "storage_bor_s_solid_01_macro": {
+   "capacity": 100000,
+   "type": "solid"
+  },
+  "storage_par_l_container_01_macro": {
+   "capacity": 1000000,
+   "type": "container"
+  },
+  "storage_par_l_liquid_01_macro": {
+   "capacity": 1000000,
+   "type": "liquid"
+  },
+  "storage_par_l_solid_01_macro": {
+   "capacity": 1000000,
+   "type": "solid"
+  },
+  "storage_par_m_container_01_macro": {
+   "capacity": 250000,
+   "type": "container"
+  },
+  "storage_par_m_liquid_01_macro": {
+   "capacity": 500000,
+   "type": "liquid"
+  },
+  "storage_par_m_solid_01_macro": {
+   "capacity": 500000,
+   "type": "solid"
+  },
+  "storage_par_s_container_01_macro": {
+   "capacity": 50000,
+   "type": "container"
+  },
+  "storage_par_s_liquid_01_macro": {
+   "capacity": 100000,
+   "type": "liquid"
+  },
+  "storage_par_s_solid_01_macro": {
+   "capacity": 100000,
+   "type": "solid"
+  },
+  "storage_pir_l_condensate_01_macro": {
+   "capacity": 50,
+   "type": "condensate"
+  },
+  "storage_pir_s_condensate_01_macro": {
+   "capacity": 10000,
+   "type": "condensate"
+  },
+  "storage_spl_l_container_01_macro": {
+   "capacity": 1000000,
+   "type": "container"
+  },
+  "storage_spl_l_liquid_01_macro": {
+   "capacity": 1000000,
+   "type": "liquid"
+  },
+  "storage_spl_l_solid_01_macro": {
+   "capacity": 1000000,
+   "type": "solid"
+  },
+  "storage_spl_m_container_01_macro": {
+   "capacity": 250000,
+   "type": "container"
+  },
+  "storage_spl_m_liquid_01_macro": {
+   "capacity": 500000,
+   "type": "liquid"
+  },
+  "storage_spl_m_solid_01_macro": {
+   "capacity": 500000,
+   "type": "solid"
+  },
+  "storage_spl_s_container_01_macro": {
+   "capacity": 50000,
+   "type": "container"
+  },
+  "storage_spl_s_liquid_01_macro": {
+   "capacity": 100000,
+   "type": "liquid"
+  },
+  "storage_spl_s_solid_01_macro": {
+   "capacity": 100000,
+   "type": "solid"
+  },
+  "storage_tel_l_container_01_macro": {
+   "capacity": 1000000,
+   "type": "container"
+  },
+  "storage_tel_l_liquid_01_macro": {
+   "capacity": 1000000,
+   "type": "liquid"
+  },
+  "storage_tel_l_solid_01_macro": {
+   "capacity": 1000000,
+   "type": "solid"
+  },
+  "storage_tel_m_container_01_macro": {
+   "capacity": 250000,
+   "type": "container"
+  },
+  "storage_tel_m_liquid_01_macro": {
+   "capacity": 500000,
+   "type": "liquid"
+  },
+  "storage_tel_m_solid_01_macro": {
+   "capacity": 500000,
+   "type": "solid"
+  },
+  "storage_tel_s_container_01_macro": {
+   "capacity": 50000,
+   "type": "container"
+  },
+  "storage_tel_s_liquid_01_macro": {
+   "capacity": 100000,
+   "type": "liquid"
+  },
+  "storage_tel_s_solid_01_macro": {
+   "capacity": 100000,
+   "type": "solid"
+  },
+  "storage_ter_l_container_01_macro": {
+   "capacity": 1000000,
+   "type": "container"
+  },
+  "storage_ter_l_liquid_01_macro": {
+   "capacity": 1000000,
+   "type": "liquid"
+  },
+  "storage_ter_l_solid_01_macro": {
+   "capacity": 1000000,
+   "type": "solid"
+  },
+  "storage_ter_m_container_01_macro": {
+   "capacity": 500000,
+   "type": "container"
+  },
+  "storage_ter_m_container_tradestation_01_macro": {
+   "capacity": 300000,
+   "type": "container"
+  },
+  "storage_ter_m_liquid_01_macro": {
+   "capacity": 500000,
+   "type": "liquid"
+  },
+  "storage_ter_m_solid_01_macro": {
+   "capacity": 500000,
+   "type": "solid"
+  },
+  "storage_ter_s_container_01_macro": {
+   "capacity": 100000,
+   "type": "container"
+  },
+  "storage_ter_s_liquid_01_macro": {
+   "capacity": 100000,
+   "type": "liquid"
+  },
+  "storage_ter_s_liquid_tradestation_01_macro": {
+   "capacity": 100000,
+   "type": "liquid"
+  },
+  "storage_ter_s_solid_01_macro": {
+   "capacity": 100000,
+   "type": "solid"
   }
  }
 }

@@ -151,7 +151,43 @@ for source in SOURCES:
             methods = {p.get("method") for p in WARE_EL[ware].findall("production")}
             if method not in methods:
                 method = "default"
-            MODULE_MACROS[macro.get("name").lower()] = {"ware": ware, "method": method}
+            wf = macro.find(".//workforce")
+            MODULE_MACROS[macro.get("name").lower()] = {
+                "ware": ware,
+                "method": method,
+                "workforce": int(wf.get("max")) if wf is not None and wf.get("max") else 0,
+            }
+
+# habitats (worker capacity) and storage modules (cargo capacity by type)
+HABITATS = {}
+STORAGE = {}
+for source in SOURCES:
+    for path in ENTRIES[source]:
+        m = re.search(r"^assets/structures/.*/macros/((hab|storage)_[a-z0-9_]+_macro)\.xml$", path)
+        if not m or "buildstorage" in path:
+            continue
+        root = ET.fromstring(read_entry(ENTRIES[source][path]))
+        macro = root.find("macro")
+        if macro is None:
+            continue
+        name = macro.get("name").lower()
+        if m.group(2) == "hab":
+            wf = macro.find(".//workforce")
+            if wf is not None and wf.get("capacity"):
+                HABITATS[name] = {"capacity": int(wf.get("capacity")), "race": wf.get("race") or ""}
+        else:
+            cargo = macro.find(".//cargo")
+            if cargo is not None and cargo.get("max") and macro.get("class") == "storage":
+                STORAGE[name] = {"capacity": int(cargo.get("max")), "type": (cargo.get("tags") or "").split()[0]}
+
+# build cost of each production module: the module ware that references its macro
+for wid, el in WARE_EL.items():
+    comp = el.find("component")
+    price = el.find("price")
+    if comp is not None and price is not None and wid.startswith("module_"):
+        ref = (comp.get("ref") or "").lower()
+        if ref in MODULE_MACROS:
+            MODULE_MACROS[ref]["cost"] = int(price.get("average"))
 
 # ---------------------------------------------------------------- recipes
 
@@ -252,7 +288,13 @@ for source, data in files("libraries/mapdefaults.xml"):
 # ---------------------------------------------------------------- write
 
 modules = {k: v for k, v in sorted(MODULE_MACROS.items()) if v["ware"] in wares}
-payload = {"wares": wares, "modules": modules, "sectors": dict(sorted(sectors.items()))}
+payload = {
+    "wares": wares,
+    "modules": modules,
+    "sectors": dict(sorted(sectors.items())),
+    "habitats": dict(sorted(HABITATS.items())),
+    "storage": dict(sorted(STORAGE.items())),
+}
 version = re.sub(r"\s+", "", open(os.path.join(GAME, "version.dat")).read())
 gamever = f"{version[0]}.{version[1:]}" if version.isdigit() else version
 
@@ -265,6 +307,8 @@ with open(os.path.join(PROJECT, "data", "wares.js"), "w", encoding="utf-8", newl
     f.write("const WARES_DATA = " + json.dumps(wares, ensure_ascii=False) + ";\n")
     f.write("const MODULE_MACROS = " + json.dumps(modules) + ";\n")
     f.write("const SECTORS = " + json.dumps(payload["sectors"], ensure_ascii=False) + ";\n")
+    f.write("const HABITATS = " + json.dumps(payload["habitats"]) + ";\n")
+    f.write("const STORAGE = " + json.dumps(payload["storage"]) + ";\n")
 
 print(f"game {gamever}: {len(wares)} wares, {len(modules)} module macros, {len(sectors)} sectors")
 print("mined:", sorted(w for w in wares if wares[w]["isMined"]))

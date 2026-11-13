@@ -7,7 +7,7 @@
 <meta name="description" content="Production chain planner for X4: Foundations. See what a ware needs, track what you have built, find shortfalls.">
 <title>X4 Factories Planner</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23131619'/%3E%3Cpath d='M11 10h5v6h5M11 22h5v-6' fill='none' stroke='%2339414a' stroke-width='2'/%3E%3Crect x='5' y='7' width='7' height='6' rx='1.5' fill='%23a9b1ba'/%3E%3Crect x='5' y='19' width='7' height='6' rx='1.5' fill='%23a9b1ba'/%3E%3Crect x='20' y='12' width='8' height='8' rx='2' fill='%234fcab9'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="style.css?v=20">
+<link rel="stylesheet" href="style.css?v=23">
 </head>
 <body>
 <div id="app">
@@ -71,6 +71,15 @@
           <span class="target-unit">per hour</span>
           <button type="button" class="btn" id="target-match" data-fk="target:match" hidden></button>
         </div>
+        <div class="chain-options">
+          <label class="select-field" id="chain-race-wrap"><span>Recipes</span>
+            <select id="chain-race" data-fk="chain:race"></select>
+          </label>
+          <label class="select-field" id="chain-sun-wrap"><span>Solar sector</span>
+            <select id="chain-sun" data-fk="chain:sun"></select>
+          </label>
+          <p class="chain-cost" id="chain-cost"></p>
+        </div>
       </div>
 
       <div id="chain-canvas">
@@ -87,34 +96,77 @@
     </main>
 
     <main id="empire-view" hidden>
-      <section class="rank-panel" aria-labelledby="rank-name">
-        <div class="rank-badge" id="rank-badge" aria-hidden="true"></div>
-        <div class="rank-text">
-          <p class="rank-level" id="rank-level"></p>
-          <h1 id="rank-name"></h1>
-          <p class="rank-flavor" id="rank-flavor"></p>
-        </div>
-        <div class="rank-figures">
-          <p class="rank-profit"><span class="num" id="rank-profit"></span><span class="unit">Cr per hour</span></p>
-          <p class="rank-day" id="rank-day"></p>
-          <div class="rank-next" id="rank-next"></div>
-        </div>
-      </section>
+      <nav class="tabs" aria-label="Empire sections">
+        <button type="button" data-tab="overview" aria-pressed="true">Overview</button>
+        <button type="button" data-tab="stations" aria-pressed="false">Stations</button>
+        <button type="button" data-tab="prices" aria-pressed="false">Prices</button>
+        <button type="button" data-tab="rewards" aria-pressed="false">Rewards</button>
+      </nav>
 
-      <section class="empire-source" id="empire-source" aria-live="polite"></section>
+      <div class="tab-panel" data-panel="overview">
+        <section class="rank-panel" aria-labelledby="rank-name">
+          <div class="rank-badge" id="rank-badge" aria-hidden="true"></div>
+          <div class="rank-text">
+            <p class="rank-level" id="rank-level"></p>
+            <h1 id="rank-name"></h1>
+            <p class="rank-flavor" id="rank-flavor"></p>
+            <button type="button" class="btn rank-share" data-action="share"><span data-icon="image"></span>Share card</button>
+          </div>
+          <div class="rank-figures">
+            <p class="rank-profit"><span class="num" id="rank-profit"></span><span class="unit">Cr per hour</span></p>
+            <p class="rank-day" id="rank-day"></p>
+            <div class="rank-next" id="rank-next"></div>
+          </div>
+        </section>
 
-      <section class="levels" aria-labelledby="levels-title">
-        <h2 id="levels-title">Levels</h2>
-        <ol id="level-ladder"></ol>
-      </section>
+        <section class="empire-source" id="empire-source" aria-live="polite"></section>
 
-      <section class="stations" aria-labelledby="stations-title">
-        <div class="stations-head">
-          <h2 id="stations-title">Stations</h2>
-          <p class="quiet-note" id="stations-note"></p>
+        <div class="overview-grid">
+          <section class="card" aria-labelledby="attention-title">
+            <h2 id="attention-title">Needs attention</h2>
+            <div id="attention-list"></div>
+          </section>
+          <section class="card" aria-labelledby="history-title">
+            <h2 id="history-title">Earnings over time</h2>
+            <div id="history"></div>
+          </section>
         </div>
-        <div id="station-list"></div>
-      </section>
+      </div>
+
+      <div class="tab-panel" data-panel="stations" hidden>
+        <div id="plan-bar" hidden></div>
+        <section class="stations" aria-labelledby="stations-title">
+          <div class="stations-head">
+            <h2 id="stations-title">Stations</h2>
+            <p class="quiet-note" id="stations-note"></p>
+          </div>
+          <div id="station-list"></div>
+        </section>
+      </div>
+
+      <div class="tab-panel" data-panel="prices" hidden>
+        <section aria-labelledby="prices-title">
+          <div class="stations-head">
+            <h2 id="prices-title">Price check</h2>
+          </div>
+          <p class="quiet-note prices-note" id="prices-note"></p>
+          <div id="price-list"></div>
+        </section>
+      </div>
+
+      <div class="tab-panel" data-panel="rewards" hidden>
+        <section class="levels" aria-labelledby="levels-title">
+          <h2 id="levels-title">Levels</h2>
+          <ol id="level-ladder"></ol>
+        </section>
+        <section class="achievements" aria-labelledby="ach-title">
+          <div class="stations-head">
+            <h2 id="ach-title">Achievements</h2>
+            <p class="quiet-note" id="ach-count"></p>
+          </div>
+          <ul id="achievement-list"></ul>
+        </section>
+      </div>
     </main>
 
     <aside id="details" aria-label="Ware details" hidden>
@@ -147,9 +199,17 @@
 
 </div>
 
-<script src="data/wares.js?v=20"></script>
-<script src="savegame.js?v=20"></script>
-<script src="badges.js?v=20"></script>
-<script src="app.js?v=20"></script>
+<div id="modal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title" tabindex="-1">
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<script src="data/wares.js?v=23"></script>
+<script src="savegame.js?v=23"></script>
+<script src="badges.js?v=23"></script>
+<script src="app.js?v=23"></script>
+<script src="empire.js?v=23"></script>
+<script>init();</script>
 </body>
 </html>

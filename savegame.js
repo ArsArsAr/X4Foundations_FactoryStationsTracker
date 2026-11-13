@@ -1,7 +1,8 @@
 "use strict";
 
 /* ---------------------------------------------------------------------
-   Reads player-owned stations out of an X4: Foundations save file.
+   Reads player-owned stations, and a market snapshot of everyone else's
+   trade offers, out of an X4: Foundations save file.
 
    Saves are gzipped XML, often 500 MB to 1 GB once unpacked, so they are
    never loaded whole. The file is decompressed as a stream and scanned
@@ -12,7 +13,8 @@
 --------------------------------------------------------------------- */
 
 (function (root) {
-  const MODULE_CLASSES = new Set(["production", "habitation"]);
+  // owners whose trade offers are not a market the player can use
+  const HOSTILE_OWNERS = new Set(["xenon", "khaak", "ownerless", "player"]);
 
   const attr = (line, name) => {
     const m = line.match(new RegExp(`\\s${name}="([^"]*)"`));
@@ -23,30 +25,37 @@
     s.replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
 
   function createScanner() {
-    const stack = [];     // open components: { cls, macro, station, module, ship }
-    const stations = [];
-    let current = null;   // nearest player station on the stack
-    let sector = null;    // nearest sector macro on the stack
-    let saveInfo = {};
+    const stack = [];      // open components: { cls, macro, station, npc, module, storage, ship }
+    const stations = [];   // player stations
+    const market = {};     // ware -> { buy: [[price, amount, sector, owner]], sell: [...] }
+    let current = null;    // nearest station entry (player or NPC) on the stack
+    let sector = null;     // nearest sector macro on the stack
+    let inShip = false;    // nearest ship sits between us and the station
+    let block = null;      // "cargo" | "shortage" | "override" while inside one
+    const saveInfo = {};
 
     function recompute() {
       current = null;
       sector = null;
+      inShip = false;
+      let shipSeen = false;
       for (let i = stack.length - 1; i >= 0; i--) {
         const e = stack[i];
-        if (!current && e.station) current = e;
+        if (e.ship && !current) shipSeen = true;
+        if (!current && (e.station || e.npc)) {
+          current = e;
+          inShip = shipSeen;
+        }
         if (!sector && e.cls === "sector") sector = e.macro;
         if (current && sector) break;
       }
     }
 
-    // inside a ship (e.g. a docked miner), not the station itself
-    function insideShip() {
-      for (let i = stack.length - 1; i >= 0; i--) {
-        if (stack[i].station) return false;
-        if (stack[i].ship) return true;
-      }
-      return false;
+    const top = () => stack[stack.length - 1];
+
+    function addMarket(side, ware, price, amount, owner) {
+      if (!market[ware]) market[ware] = { buy: [], sell: [] };
+      market[ware][side].push([price, amount, sector, owner]);
     }
 
     function line(raw) {
@@ -59,41 +68,51 @@
         const selfClosing = s.endsWith("/>");
         const entry = { cls, macro, ship: cls.startsWith("ship_") };
 
-        if (cls === "station" && attr(s, "owner") === "player") {
-          const name = attr(s, "name");
-          entry.station = {
-            name: name ? unescapeXml(name) : null,
-            code: attr(s, "code"),
-            macro,
-            sector: null,
-            underConstruction: attr(s, "state") === "construction",
-            modules: [],          // { macro, efficiency, built }
-            habitats: 0,
-            workforce: 0,
-          };
-          stations.push(entry.station);
-        } else if (current && MODULE_CLASSES.has(cls) && !insideShip()) {
-          const station = current.station;
-          if (cls === "production") {
-            entry.module = { macro, efficiency: null, built: attr(s, "state") !== "construction" };
-            station.modules.push(entry.module);
+        if (cls === "station") {
+          const owner = attr(s, "owner");
+          if (owner === "player") {
+            const name = attr(s, "name");
+            entry.station = {
+              name: name ? unescapeXml(name) : null,
+              code: attr(s, "code"),
+              macro,
+              sector,
+              underConstruction: attr(s, "state") === "construction",
+              modules: [],      // { macro, efficiency, built, state, shortage }
+              habitats: [],     // habitat macros
+              storage: [],      // storage macros
+              workforce: 0,
+              cargo: {},        // ware -> amount in stock
+              offers: [],       // { side, ware, price, amount, desired } price in Cr
+              overrides: {},    // ware -> { buy, sell } manual prices in Cr
+            };
+            stations.push(entry.station);
           } else {
-            station.habitats++;
+            entry.npc = { owner };
+          }
+        } else if (current && current.station && !inShip) {
+          const st = current.station;
+          if (cls === "production") {
+            entry.module = { macro, efficiency: null, built: attr(s, "state") !== "construction", state: null, shortage: null };
+            st.modules.push(entry.module);
+          } else if (cls === "habitation") {
+            st.habitats.push(macro);
+          } else if (cls === "storage") {
+            entry.storage = true;
+            st.storage.push(macro);
           }
         }
 
         if (!selfClosing) {
           stack.push(entry);
-          if (entry.station) entry.station.sector = sector;
           recompute();
-        } else if (entry.station) {
-          entry.station.sector = sector;
         }
         return;
       }
 
       if (s.startsWith("</component>")) {
         stack.pop();
+        block = null;
         recompute();
         return;
       }
@@ -108,22 +127,68 @@
         return;
       }
 
-      if (s.startsWith("<efficiency ")) {
-        const top = stack[stack.length - 1];
-        if (top && top.module && top.module.efficiency === null) {
-          const v = Number(attr(s, "product"));
-          if (Number.isFinite(v)) top.module.efficiency = v;
+      // trade offers: a station's own buy and sell orders (price in hundredths)
+      if (s.startsWith("<trade ") && !inShip) {
+        const ware = attr(s, "ware");
+        const price = Number(attr(s, "price"));
+        if (!ware || !Number.isFinite(price)) return;
+        const side = s.includes(" buyer=") ? "buy" : s.includes(" seller=") ? "sell" : null;
+        if (!side) return;
+        const amount = Number(attr(s, "amount")) || 0;
+        if (current.station) {
+          current.station.offers.push({ side, ware, price: price / 100, amount, desired: Number(attr(s, "desired")) || 0 });
+        } else {
+          const flags = attr(s, "flags") || "";
+          if (!flags.includes("virtual") && !flags.includes("shady") && !HOSTILE_OWNERS.has(current.npc.owner)) {
+            addMarket(side, ware, price / 100, amount, current.npc.owner);
+          }
         }
-      } else if (s.startsWith("<workforce ") && !insideShip()) {
+        return;
+      }
+
+      if (!current.station || inShip) return;
+      const st = current.station;
+
+      if (s === "<cargo>") {
+        if (top() && top().storage) block = "cargo";
+      } else if (s === "</cargo>" || s === "</shortage>" || s === "</override>") {
+        block = null;
+      } else if (s === "<shortage>") {
+        if (top() && top().module) block = "shortage";
+      } else if (s === "<override>") {
+        block = "override";
+      } else if (s.startsWith("<ware ")) {
+        const ware = attr(s, "ware");
+        if (block === "cargo") {
+          const n = Number(attr(s, "amount")) || 0;
+          if (n) st.cargo[ware] = (st.cargo[ware] || 0) + n;
+        } else if (block === "shortage") {
+          const m = top().module;
+          m.shortage = m.shortage || {};
+          m.shortage[ware] = Number(attr(s, "amount")) || 0;
+        } else if (block === "override") {
+          const buy = Number(attr(s, "buy"));
+          const sell = Number(attr(s, "sell"));
+          st.overrides[ware] = { buy: Number.isFinite(buy) ? buy : null, sell: Number.isFinite(sell) ? sell : null };
+        }
+      } else if (s.startsWith("<production ") && top() && top().module) {
+        top().module.state = attr(s, "state");
+      } else if (s.startsWith("<efficiency ")) {
+        const t = top();
+        if (t && t.module && t.module.efficiency === null) {
+          const v = Number(attr(s, "product"));
+          if (Number.isFinite(v)) t.module.efficiency = v;
+        }
+      } else if (s.startsWith("<workforce ")) {
         const n = Number(attr(s, "amount"));
-        if (Number.isFinite(n)) current.station.workforce += n;
+        if (Number.isFinite(n)) st.workforce += n;
       }
     }
 
-    return { line, result: () => ({ stations, info: saveInfo }) };
+    return { line, result: () => ({ stations, market, info: saveInfo }) };
   }
 
-  // Feed an async iterable of text chunks; returns { stations, info }.
+  // Feed an async iterable of text chunks; returns { stations, market, info }.
   async function scanChunks(chunks, onProgress) {
     const scanner = createScanner();
     let rest = "";
