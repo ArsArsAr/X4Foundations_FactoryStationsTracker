@@ -27,6 +27,9 @@
   function createScanner() {
     const stack = [];      // open components: { cls, macro, station, npc, module, storage, ship }
     const stations = [];   // player stations
+    const ships = [];      // player ships: { id, macro, code, name }
+    const trades = [];     // economy log: [time, ware, buyerID, sellerID, price Cr, amount]
+    const eco = { inLog: false, start: Infinity, end: 0 };
     const market = {};     // ware -> { buy: [[price, amount, sector, owner]], sell: [...] }
     let current = null;    // nearest station entry (player or NPC) on the stack
     let sector = null;     // nearest sector macro on the stack
@@ -67,6 +70,10 @@
         const macro = (attr(s, "macro") || "").toLowerCase();
         const selfClosing = s.endsWith("/>");
         const entry = { cls, macro, ship: cls.startsWith("ship_") };
+        if (entry.ship && attr(s, "owner") === "player") {
+          const name = attr(s, "name");
+          ships.push({ id: attr(s, "id"), macro, code: attr(s, "code"), name: name ? unescapeXml(name) : null });
+        }
 
         if (cls === "station") {
           const owner = attr(s, "owner");
@@ -74,6 +81,7 @@
             const name = attr(s, "name");
             entry.station = {
               name: name ? unescapeXml(name) : null,
+              id: attr(s, "id"),
               code: attr(s, "code"),
               macro,
               sector,
@@ -82,6 +90,7 @@
               habitats: [],     // habitat macros
               storage: [],      // storage macros
               workforce: 0,
+              workforceByRace: {}, // race -> workers
               cargo: {},        // ware -> amount in stock
               offers: [],       // { side, ware, price, amount, desired } price in Cr
               overrides: {},    // ware -> { buy, sell } manual prices in Cr
@@ -117,9 +126,28 @@
         return;
       }
 
+      // the economy log: every completed trade of the last game day or so
+      // (stations also carry a self-closing <economylog .../> summary tag)
+      if (s.startsWith("<economylog") && !s.endsWith("/>")) {
+        eco.inLog = true;
+        return;
+      }
+      if (eco.inLog) {
+        if (s.startsWith("</economylog")) eco.inLog = false;
+        else if (s.startsWith("<log ")) {
+          const t = Number(attr(s, "time"));
+          if (t < eco.start) eco.start = t;
+          if (t > eco.end) eco.end = t;
+          if (s.includes(' type="trade"') && s.includes(" buyer=") && s.includes(" seller=")) {
+            trades.push([t, attr(s, "ware"), attr(s, "buyer"), attr(s, "seller"), Number(attr(s, "price")) / 100, Number(attr(s, "v")) || 0]);
+          }
+        }
+        return;
+      }
+
       if (!current) {
         if (s.startsWith("<info ") || s.startsWith("<save ") || s.startsWith("<game ")) {
-          for (const k of ["name", "date", "version", "build", "original"]) {
+          for (const k of ["name", "date", "version", "build", "original", "time"]) {
             const v = attr(s, k);
             if (v && !saveInfo[k]) saveInfo[k] = s.startsWith("<save ") && k === "name" ? unescapeXml(v) : v;
           }
@@ -181,14 +209,24 @@
         }
       } else if (s.startsWith("<workforce ")) {
         const n = Number(attr(s, "amount"));
-        if (Number.isFinite(n)) st.workforce += n;
+        if (Number.isFinite(n)) {
+          st.workforce += n;
+          const race = attr(s, "race") || "argon";
+          st.workforceByRace[race] = (st.workforceByRace[race] || 0) + n;
+        }
       }
     }
 
-    return { line, result: () => ({ stations, market, info: saveInfo }) };
+    return {
+      line,
+      result: () => ({
+        stations, market, ships, trades, info: saveInfo,
+        log: { start: Number.isFinite(eco.start) ? eco.start : null, end: eco.end || null },
+      }),
+    };
   }
 
-  // Feed an async iterable of text chunks; returns { stations, market, info }.
+  // Feed an async iterable of text chunks; returns { stations, market, ships, trades, log, info }.
   async function scanChunks(chunks, onProgress) {
     const scanner = createScanner();
     let rest = "";

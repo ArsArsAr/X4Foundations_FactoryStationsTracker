@@ -189,6 +189,19 @@ for wid, el in WARE_EL.items():
         if ref in MODULE_MACROS:
             MODULE_MACROS[ref]["cost"] = int(price.get("average"))
 
+# ---------------------------------------------------------------- worker upkeep
+# Workers eat: X4 models it as the wares workunit_busy (employed) and
+# workunit_idle, 200 workers per 600 s cycle, one recipe per race.
+WORKFORCE = {}
+for state in ("busy", "idle"):
+    el = WARE_EL.get(f"workunit_{state}")
+    for prod in (el.findall("production") if el is not None else []):
+        per_hour = 3600 / float(prod.get("time")) / int(prod.get("amount"))
+        WORKFORCE.setdefault(prod.get("method"), {})[state] = [
+            {"wareID": w.get("ware"), "amount": round(int(w.get("amount")) * per_hour, 5)}
+            for w in prod.find("primary").findall("ware")
+        ]
+
 # ---------------------------------------------------------------- recipes
 
 def recipe(prod):
@@ -212,7 +225,7 @@ for m in MODULE_MACROS.values():
     used_methods.setdefault(m["ware"], set()).add(m["method"])
 
 # include every input of every buildable recipe, recursively
-queue = list(wanted)
+queue = list(wanted) + [w["wareID"] for m in WORKFORCE.values() for lst in m.values() for w in lst]
 included = set()
 while queue:
     wid = queue.pop()
@@ -294,6 +307,7 @@ payload = {
     "sectors": dict(sorted(sectors.items())),
     "habitats": dict(sorted(HABITATS.items())),
     "storage": dict(sorted(STORAGE.items())),
+    "workforce": WORKFORCE,
 }
 version = re.sub(r"\s+", "", open(os.path.join(GAME, "version.dat")).read())
 gamever = f"{version[0]}.{version[1:]}" if version.isdigit() else version
@@ -309,6 +323,7 @@ with open(os.path.join(PROJECT, "data", "wares.js"), "w", encoding="utf-8", newl
     f.write("const SECTORS = " + json.dumps(payload["sectors"], ensure_ascii=False) + ";\n")
     f.write("const HABITATS = " + json.dumps(payload["habitats"]) + ";\n")
     f.write("const STORAGE = " + json.dumps(payload["storage"]) + ";\n")
+    f.write("const WORKFORCE = " + json.dumps(WORKFORCE) + ";\n")
 
 print(f"game {gamever}: {len(wares)} wares, {len(modules)} module macros, {len(sectors)} sectors")
 print("mined:", sorted(w for w in wares if wares[w]["isMined"]))

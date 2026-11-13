@@ -14,6 +14,9 @@ X4's economy is a real dependency graph. Almost everything needs Energy Cells, m
 
 - **Load your save.** Pick a save file and every player-owned station is read in a few seconds: name, sector, production modules, the race recipe each module runs, its real efficiency (sunlight and workforce included), and the station's workforce. The file is read on your computer and never uploaded.
 - **Needs attention.** One list of what is going wrong right now: stalled modules and the inputs they wait for, stock that runs out within a few hours, storage that is nearly full, and stations short of workers (with what full staff would add). Click an entry to jump to the station.
+- **Mining coverage.** From the trade log in your save (roughly the last game day), how much of each ore, gas and ice your stations use, how much your miners actually delivered, what you bought from NPCs, how many modules are stalled for it, and about how many more miners would close the gap.
+- **Bought and sold at the same time.** Wares your empire sells to NPCs while also buying them back from NPCs, at the real prices in the log, and what supplying your own stations first would keep.
+- **What your market wants.** Wares NPC stations in your universe want more of than anyone has for sale, ranked by what one module would earn at local prices, with the inputs you do not make yet and the payback time.
 - **Price check.** Your stations' buy and sell prices next to every NPC buyer and seller in your save, per ware. It points out where you undercut everyone and could ask more, where you overpay, and where you are priced out, with the gain per hour. It uses your universe's economy, not wiki averages.
 - **What-if plan.** Add or remove modules on any station and see the change in earnings, the build cost, how long it takes to pay for itself, which wares would fall short, and whether it gets you to the next level.
 - **Earnings over time.** Every save you load adds a point to a chart, with the change since the save before.
@@ -33,7 +36,7 @@ X4's economy is a real dependency graph. Almost everything needs Energy Cells, m
 
 ### Using it
 
-- **Empire** (top bar) has four tabs. **Overview**: level, earnings, what needs attention, earnings over time. **Stations**: every station; open one to see its detail and use the plus and minus buttons to plan changes. **Prices**: your prices against the NPC market. **Rewards**: levels and achievements.
+- **Empire** (top bar) has five tabs. **Overview**: level, earnings, what needs attention, earnings over time. **Stations**: every station; open one to see its detail and use the plus and minus buttons to plan changes. **Supply**: mining coverage and wares you buy and sell at the same time. **Market**: what NPCs are short of, and your prices against theirs. **Rewards**: levels and achievements.
 - **Planner**: find a ware in the left list (press `/` to search), click its name, and set a target. Each node shows the hourly rate needed and the modules needed versus built.
 - **Click any node or ware** for full details (`Esc` closes them).
 - **My network** (bottom): supply and demand across everything you have built.
@@ -41,7 +44,7 @@ X4's economy is a real dependency graph. Almost everything needs Energy Cells, m
 
 ### How earnings are estimated
 
-Each module's value is what it makes per hour at the ware's average price, minus what it uses per hour at the inputs' average prices. A station's figure is the sum of its modules, and the empire figure is the sum of everything you have built. It assumes everything sells and every input is bought at average price. That makes it a good way to compare stations and track growth, not an exact credit forecast. Your level always uses this figure, so it does not jump around with prices.
+Each module's value is what it makes per hour at the ware's average price, minus what it uses per hour at the inputs' average prices. Stations with habitats also pay for what their workers eat (food and medical supplies, by race; employed workers eat more than idle ones). A station's figure is the sum of its modules, and the empire figure is the sum of everything you have built. It assumes everything sells and every input is bought at average price. That makes it a good way to compare stations and track growth, not an exact credit forecast. Your level always uses this figure, so it does not jump around with prices.
 
 The **own prices** figure uses each station's trade offers from the save instead (or the price you set by hand). For the empire total, wares your stations pass to each other cancel out, since that is money moving between your own pockets. Only what leaves or enters your empire is counted.
 
@@ -61,8 +64,8 @@ No build tooling for the app. It is vanilla HTML/CSS/JS, kept that way on purpos
 - `app.js`: planner logic, chain maths, persistence. One `refresh()` re-renders every surface from `state` after any change.
 - `empire.js`: the Empire view: save import, attention list, stations and the what-if plan, price check, history, achievements, celebration and share card.
 - `badges.js`: draws the 20 level badges and the achievement medals as SVG.
-- `savegame.js`: the save reader. It streams and unpacks the gzipped save and scans it line by line, because saves are 500 MB to 1 GB of XML. It reads player stations (modules, production state, shortages, workforce, cargo, trade offers, manual prices) and a summary of every NPC trade offer. It also runs in Node for testing.
-- `data/wares.js`: generated data, loaded as a plain `<script>` so it works from a `file://` page: `WARES_DATA`, `MODULE_MACROS` (module macro to ware, recipe, workforce and build cost), `SECTORS` (name and sunlight), `HABITATS` (worker capacity) and `STORAGE` (capacity by storage type)
+- `savegame.js`: the save reader. It streams and unpacks the gzipped save and scans it line by line, because saves are 500 MB to 1 GB of XML. It reads player stations (modules, production state, shortages, workforce by race, cargo, trade offers, manual prices), player ships, the economy log of completed trades, and a summary of every NPC trade offer. It also runs in Node for testing.
+- `data/wares.js`: generated data, loaded as a plain `<script>` so it works from a `file://` page: `WARES_DATA`, `MODULE_MACROS` (module macro to ware, recipe, workforce and build cost), `SECTORS` (name and sunlight), `HABITATS` (worker capacity) and `STORAGE` (capacity by storage type) and `WORKFORCE` (what workers of each race eat per hour)
 - `data/wares.json`: the same data as plain JSON
 - `tools/build_data.py`, `tools/x4cat.py`: regenerate the data from your own install after a game patch:
   ```bash
@@ -95,11 +98,12 @@ Tier 0 is not the same thing as "mined". Energy Cells is tier 0 (a Solar Power P
 
 **Saved data** lives in `localStorage`: `x4-factories-planner:module-counts` (built modules), `x4-factories-planner:empire` (stations and market summary from the last save), `x4-factories-planner:history` (earnings per loaded save), `x4-factories-planner:progress` (highest level and achievements earned) and `x4-factories-planner:ui` (open chain, target, view, chain options). If storage is unavailable the app still works, it just does not remember.
 
-**Caching note**: if you edit the app's files and a reload does not pick up the change, bump the `?v=23` query string on the `<link>`/`<script>` tags in `index.html`.
+**Caching note**: if you edit the app's files and a reload does not pick up the change, bump the `?v=24` query string on the `<link>`/`<script>` tags in `index.html`.
 
 ## Known limitations
 
 - **Prices are a snapshot.** The price check and own-price earnings use the offers in the save at the moment it was written. Stations on automatic pricing move their prices with their stock.
+- **Supply is measured empire-wide.** Most goods travel through your own ships, and X4's trade log cannot say which station a ship's NPC purchase finally went to, so mining coverage and the bought-and-sold list compare your whole empire with the outside world rather than one station at a time. "Needed" assumes every module runs.
 - **The what-if plan is not saved.** It lasts until you reload the page or load a save.
 - **Scrap recyclers are not modelled.** They have no fixed recipe, so a save import skips them and says so.
 - **Earnings are estimates** at average prices (see above). Hand-entered modules count at 100% efficiency; modules from a save use the efficiency the game recorded.

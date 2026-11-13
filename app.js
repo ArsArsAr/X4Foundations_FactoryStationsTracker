@@ -318,7 +318,7 @@ function loadUI() {
     if (!ui) return null;
     state.networkOpen = !!ui.networkOpen;
     state.view = ui.view === "empire" ? "empire" : "planner";
-    if (["overview", "stations", "prices", "rewards"].includes(ui.empireTab)) state.empireTab = ui.empireTab;
+    if (["overview", "stations", "supply", "prices", "rewards"].includes(ui.empireTab)) state.empireTab = ui.empireTab;
     if (typeof ui.chainRace === "string") state.chainRace = ui.chainRace;
     if (ui.chainSector && SECTORS[ui.chainSector]) {
       state.chainSector = ui.chainSector;
@@ -1062,11 +1062,21 @@ function unitFlows(u) {
 // Estimated value added per hour at average prices: everything made is
 // worth its average price, every input costs its average price.
 function empireProfit() {
-  return productionUnits().reduce((sum, u) => sum + unitFlows(u).value, 0);
+  let value = productionUnits().reduce((sum, u) => sum + unitFlows(u).value, 0);
+  for (const [ware, n] of empireUpkeep()) value -= n * W[ware].price.avg;
+  return value;
 }
 
-function stationProfit(st) {
-  return st.modules.reduce((sum, m) => sum + unitFlows(m).value, 0);
+// food and medicine your workers eat per hour, across every station read
+// from a save (stations without habitats have no workers to feed)
+function empireUpkeep() {
+  const total = new Map();
+  if (state.empire) {
+    for (const st of state.empire.stations) {
+      for (const u of st.upkeep || []) total.set(u.ware, (total.get(u.ware) || 0) + u.amount);
+    }
+  }
+  return total;
 }
 
 function levelFor(profit) {
@@ -1084,6 +1094,7 @@ function computeBalance() {
     supply.set(u.ware, (supply.get(u.ware) || 0) + f.made);
     for (const i of f.uses) demand.set(i.ware, (demand.get(i.ware) || 0) + i.amount);
   }
+  for (const [ware, n] of empireUpkeep()) demand.set(ware, (demand.get(ware) || 0) + n);
 
   const rows = [...new Set([...supply.keys(), ...demand.keys()])].map((id) => {
     const w = W[id];

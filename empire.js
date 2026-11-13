@@ -106,14 +106,16 @@ function writeJSON(key, value) {
    average prices or at the station's own trade prices.
 --------------------------------------------------------------------- */
 
-// net units per hour by ware: positive = surplus to sell, negative = to buy in
-function stationNet(modules) {
+// net units per hour by ware: positive = surplus to sell, negative = to
+// buy in. Includes the food and medicine the station's workers eat.
+function stationNet(st, modules = st.modules) {
   const net = new Map();
   for (const m of modules) {
     const f = unitFlows(m);
     net.set(m.ware, (net.get(m.ware) || 0) + f.made);
     for (const i of f.uses) net.set(i.ware, (net.get(i.ware) || 0) - i.amount);
   }
+  for (const u of st.upkeep || []) net.set(u.ware, (net.get(u.ware) || 0) - u.amount);
   return net;
 }
 
@@ -129,7 +131,7 @@ function ownPrice(st, ware, side) {
 
 function stationValue(st, mode = "avg", modules = st.modules) {
   let value = 0;
-  for (const [ware, n] of stationNet(modules)) {
+  for (const [ware, n] of stationNet(st, modules)) {
     if (Math.abs(n) < 1e-9) continue;
     const price = mode === "own" ? ownPrice(st, ware, n > 0 ? "sell" : "buy").price : W[ware].price.avg;
     value += n * price;
@@ -147,7 +149,7 @@ function empireOwnProfit() {
   const net = new Map();
   const prices = { sell: new Map(), buy: new Map() };
   for (const st of e.stations) {
-    for (const [w, n] of stationNet(st.modules)) {
+    for (const [w, n] of stationNet(st)) {
       net.set(w, (net.get(w) || 0) + n);
       for (const side of ["sell", "buy"]) {
         const p = ownPrice(st, w, side);
@@ -171,7 +173,7 @@ function moduleTotal(st) {
 }
 
 // hours of stock left for each input the station runs short of on its own
-function stationRunway(st, net = stationNet(st.modules)) {
+function stationRunway(st, net = stationNet(st)) {
   const out = [];
   for (const [ware, n] of net) {
     if (n >= -1e-6) continue;
@@ -273,10 +275,31 @@ function attentionIssues() {
     }
   }
 
+  if (e.flows) {
+    for (const r of miningRows()) {
+      if (r.cover >= 0.95 || !r.need) continue;
+      issues.push({
+        sev: r.stalled ? 3 : 2, st: null, kind: "mining", tab: "supply",
+        title: `${W[r.ware].label} supply covers ${fmtPercent(r.cover)} of what you use`,
+        sub: `${r.stalled ? `${r.stalled} ${plural(r.stalled, "module")} stalled waiting for it. ` : ""}${r.more ? `About ${r.more} more ${plural(r.more, "miner")} would close the gap.` : ""}`.trim(),
+        weight: 1e12 * (1 - r.cover), // ahead of single stalls: this is usually their cause
+      });
+    }
+    for (const r of internalRows()) {
+      if (r.gain < 50e3) continue;
+      issues.push({
+        sev: 1, st: null, kind: "internal", tab: "supply",
+        title: `You sell ${W[r.ware].label} to NPCs and buy it back`,
+        sub: `Supplying your own stations first keeps about ${fmtCr(r.gain)} per hour.`,
+        weight: r.gain,
+      });
+    }
+  }
+
   return issues.sort((a, b) => b.sev - a.sev || b.weight - a.weight);
 }
 
-const ISSUE_ICON = { stalled: "warning", runway: "clock", storage: "warning", workforce: "trend-up" };
+const ISSUE_ICON = { stalled: "warning", runway: "clock", storage: "warning", workforce: "trend-up", mining: "warning", internal: "trend-up" };
 
 function renderAttention() {
   const box = $("attention-list");
@@ -297,11 +320,11 @@ function renderAttention() {
   const shown = state.attentionAll ? issues : issues.slice(0, 7);
   box.innerHTML = `<ul class="issues">${shown.map((i) => `
     <li>
-      <button type="button" class="issue sev-${i.sev}" data-action="open-station" data-id="${escapeHTML(i.st.id)}">
+      <button type="button" class="issue sev-${i.sev}" ${i.st ? `data-action="open-station" data-id="${escapeHTML(i.st.id)}"` : `data-action="open-tab" data-id="${i.tab}"`}>
         <span class="issue-icon">${icon(ISSUE_ICON[i.kind], 14)}</span>
         <span class="issue-text">
           <span class="issue-title">${escapeHTML(i.title)}</span>
-          <span class="issue-sub">${escapeHTML(stationLabel(i.st))}. ${escapeHTML(i.sub)}</span>
+          <span class="issue-sub">${i.st ? escapeHTML(stationLabel(i.st)) + ". " : ""}${escapeHTML(i.sub)}</span>
         </span>
       </button>
     </li>`).join("")}</ul>
@@ -360,7 +383,11 @@ function renderEmpire() {
   const tab = state.empireTab;
   if (tab === "overview") renderOverview();
   else if (tab === "stations") renderStationsTab();
-  else if (tab === "prices") renderPrices();
+  else if (tab === "supply") renderSupply();
+  else if (tab === "prices") {
+    renderOpportunities();
+    renderPrices();
+  }
   else if (tab === "rewards") renderRewards();
 }
 
@@ -538,7 +565,7 @@ function changePlan(stId, key, step) {
 function empireNetFrom(modulesOf) {
   const net = new Map();
   for (const st of state.empire.stations) {
-    for (const [w, n] of stationNet(modulesOf(st))) net.set(w, (net.get(w) || 0) + n);
+    for (const [w, n] of stationNet(st, modulesOf(st))) net.set(w, (net.get(w) || 0) + n);
   }
   return net;
 }
@@ -606,7 +633,7 @@ function renderStationsTab() {
 
   const hasOwn = e.stations.some((st) => st.offers);
   const issueCount = new Map();
-  for (const i of attentionIssues()) issueCount.set(i.st.id, (issueCount.get(i.st.id) || 0) + 1);
+  for (const i of attentionIssues()) if (i.st) issueCount.set(i.st.id, (issueCount.get(i.st.id) || 0) + 1);
 
   const rows = e.stations
     .map((st) => ({ st, profit: stationValue(st), own: hasOwn ? stationValue(st, "own") : null, modules: moduleTotal(st) }))
@@ -669,7 +696,7 @@ function stationDetail(st) {
       </div>`).join("")
     : `<p class="quiet-note">No production modules. Docks, storage, defence or trade only.</p>`;
 
-  const net = stationNet(modules);
+  const net = stationNet(st, modules);
   const runway = new Map(stationRunway(st, net).map((r) => [r.ware, r]));
   const inbound = [...net].filter(([, v]) => v < -1e-6).sort((a, b) => a[1] - b[1]);
   const outbound = [...net].filter(([, v]) => v > 1e-6).sort((a, b) => b[1] - a[1]);
@@ -728,7 +755,7 @@ function priceAdvice() {
   const market = e.market;
   const sold = new Map(), bought = new Map();
   for (const st of e.stations) {
-    for (const [w, n] of stationNet(st.modules)) {
+    for (const [w, n] of stationNet(st)) {
       if (n > 0) sold.set(w, (sold.get(w) || 0) + n);
       else bought.set(w, (bought.get(w) || 0) - n);
     }
@@ -856,6 +883,272 @@ function renderPrices() {
 
   box.innerHTML = section("sell", "What you sell", "None of your stations has a sell offer in this save.") +
     section("buy", "What you buy", "None of your stations has a buy offer in this save.");
+}
+
+/* ---------------------------------------------------------------------
+   Supply: mining coverage and wares bought and sold at the same time.
+
+   Both come from the save's economy log, which holds every trade the
+   player's stations and ships made over roughly the last game day. Trades
+   between your own stations and ships are not money-making, so the
+   comparison is made across the whole empire: what your miners brought
+   in, what you bought from NPCs and what you sold to them.
+--------------------------------------------------------------------- */
+
+// condensed at import: per ware, units and credits per hour
+function summariseFlows(result, converted) {
+  const { trades, ships, info, log } = result;
+  if (!trades || !trades.length) return null;
+  const stationIds = new Map();
+  result.stations.forEach((s, i) => { if (s.id) stationIds.set(s.id, converted[i].id); });
+  const shipById = new Map(ships.map((s) => [s.id, s]));
+  const kind = (id) => stationIds.has(id) ? "station" : shipById.has(id) ? (shipById.get(id).macro.includes("_miner_") ? "miner" : "ship") : "npc";
+
+  let start = Infinity;
+  for (const t of trades) if (t[0] < start) start = t[0];
+  const end = Number(info.time) || log.end;
+  const hours = (end - start) / 3600;
+  if (!(hours >= 1)) return null;
+
+  const acc = {};
+  const byType = {}; // storage type -> { volume, miners } so a miner's time across wares counts once
+  const get = (w) => acc[w] || (acc[w] = { mined: 0, miners: new Set(), bought: 0, boughtCr: 0, sold: 0, soldCr: 0 });
+  for (const [, ware, buyer, seller, price, v] of trades) {
+    if (!W[ware] || !v) continue;
+    const b = kind(buyer);
+    const s = kind(seller);
+    const f = get(ware);
+    if (s === "miner" && b !== "npc") {
+      f.mined += v;
+      f.miners.add(seller);
+      const t = W[ware].storageType;
+      byType[t] = byType[t] || { volume: 0, miners: new Set() };
+      byType[t].volume += v * W[ware].volume;
+      byType[t].miners.add(seller);
+    } else if (s === "npc" && b !== "npc") {
+      f.bought += v;
+      f.boughtCr += v * price;
+    } else if (b === "npc" && s !== "npc") {
+      f.sold += v;
+      f.soldCr += v * price;
+    }
+  }
+
+  const wares = {};
+  for (const [w, f] of Object.entries(acc)) {
+    wares[w] = {
+      mined: f.mined / hours,
+      miners: f.miners.size,
+      bought: f.bought / hours,
+      buyPrice: f.bought ? f.boughtCr / f.bought : null,
+      sold: f.sold / hours,
+      sellPrice: f.sold ? f.soldCr / f.sold : null,
+    };
+  }
+  const minerCount = { solid: 0, liquid: 0 };
+  for (const s of ships) {
+    if (!s.macro.includes("_miner_")) continue;
+    if (s.macro.includes("_liquid_")) minerCount.liquid++;
+    else minerCount.solid++;
+  }
+  const perMiner = {}; // storage type -> volume one miner brings in per hour
+  for (const [t, x] of Object.entries(byType)) perMiner[t] = x.volume / hours / x.miners.size;
+  return { hours, wares, minerCount, perMiner };
+}
+
+// empire-wide units per hour your stations use (modules at full speed, plus workers)
+function empireNeed() {
+  const need = new Map();
+  for (const st of state.empire.stations) {
+    for (const [w, n] of stationNet(st)) need.set(w, (need.get(w) || 0) + n);
+  }
+  return need;
+}
+
+function miningRows() {
+  const e = state.empire;
+  const flows = e.flows.wares;
+  const net = empireNeed();
+  const stalledFor = new Map();
+  for (const st of e.stations) {
+    for (const m of st.modules) {
+      if (!m.stalled) continue;
+      for (const w of m.short || []) stalledFor.set(w, (stalledFor.get(w) || 0) + m.stalled);
+    }
+  }
+  // what one miner of the right type brings in per hour if it mined only this
+  const perMinerVolume = e.flows.perMiner || {};
+
+  return Object.values(W)
+    .filter((w) => w.isMined)
+    .map((w) => {
+      const f = flows[w.id] || { mined: 0, miners: 0, bought: 0, buyPrice: null };
+      const need = Math.max(0, -(net.get(w.id) || 0));
+      const perMiner = perMinerVolume[w.storageType] && w.volume ? perMinerVolume[w.storageType] / w.volume : 0;
+      const gap = Math.max(0, need - f.mined - f.bought);
+      const ownGap = Math.max(0, need - f.mined);
+      return {
+        ware: w.id, need, mined: f.mined, miners: f.miners, bought: f.bought, buyPrice: f.buyPrice,
+        cover: need ? Math.min(1, (f.mined + f.bought) / need) : 1,
+        perMiner, stalled: stalledFor.get(w.id) || 0,
+        more: perMiner && gap > 0 ? Math.ceil(gap / perMiner) : 0,
+        moreToStopBuying: perMiner && ownGap > 0 ? Math.ceil(ownGap / perMiner) : 0,
+      };
+    })
+    .filter((r) => r.need > 0 || r.mined > 0 || r.bought > 0)
+    .sort((a, b) => a.cover - b.cover || b.need - a.need);
+}
+
+// wares the empire sells to NPCs while also buying them from NPCs
+function internalRows() {
+  const e = state.empire;
+  const rows = [];
+  const surplus = new Map();
+  const deficit = new Map();
+  for (const st of e.stations) {
+    for (const [w, n] of stationNet(st)) {
+      const map = n > 0 ? surplus : deficit;
+      if (Math.abs(n) < 1e-6) continue;
+      if (!map.has(w)) map.set(w, []);
+      map.get(w).push({ st, n: Math.abs(n) });
+    }
+  }
+  for (const [w, f] of Object.entries(e.flows.wares)) {
+    if (!(f.bought > 0 && f.sold > 0)) continue;
+    const keep = Math.min(f.bought, f.sold);
+    const gain = keep * Math.max(0, f.buyPrice - f.sellPrice);
+    rows.push({
+      ware: w, keep, gain, bought: f.bought, buyPrice: f.buyPrice, sold: f.sold, sellPrice: f.sellPrice,
+      makers: (surplus.get(w) || []).sort((a, b) => b.n - a.n).map((x) => x.st),
+      users: (deficit.get(w) || []).sort((a, b) => b.n - a.n).map((x) => x.st),
+    });
+  }
+  return rows.sort((a, b) => b.gain - a.gain);
+}
+
+function stationNames(list, max = 3) {
+  if (!list.length) return "";
+  const names = list.slice(0, max).map((st) => escapeHTML(stationLabel(st)));
+  return names.join(", ") + (list.length > max ? ` and ${list.length - max} more` : "");
+}
+
+function renderSupply() {
+  const note = $("supply-note");
+  const mining = $("mining-list");
+  const internal = $("internal-list");
+  const e = state.empire;
+  if (!e || !e.flows) {
+    note.textContent = "";
+    const msg = !e
+      ? "Load a save to see how well your miners keep up and where you buy and sell the same ware."
+      : "Load your save again to see supply. This empire was read by an older version that did not keep the trade log.";
+    mining.innerHTML = `<p class="quiet-note">${msg}</p>`;
+    internal.innerHTML = "";
+    return;
+  }
+  const f = e.flows;
+  note.innerHTML = `From the trade log in your save: the last <strong class="num">${Math.round(f.hours)}</strong> game hours.
+    "Needed" is what your stations use with every module running, plus what their workers eat. You own ${f.minerCount.solid} solid and ${f.minerCount.liquid} gas ${plural(f.minerCount.liquid, "miner")}; most switch between wares.
+    Extra miners are counted at what one of yours brings in per hour when it mines only that ware.`;
+
+  const rows = miningRows();
+  mining.innerHTML = rows.length
+    ? `<div class="sup-row sup-head"><span>Ware</span><span>Needed</span><span>Your miners</span><span>Bought</span><span>Covered</span><span>What to do</span></div>
+      ${rows.map((r) => {
+        let advice;
+        if (r.more) advice = `<span class="tag is-short">+${r.more}</span> About ${r.more} more ${plural(r.more, "miner")} to cover the shortfall.`;
+        else if (r.moreToStopBuying && r.bought > 0) advice = `Covered, partly by buying. ${r.moreToStopBuying} more ${plural(r.moreToStopBuying, "miner")} would stop the buying.`;
+        else if (r.need) advice = "Covered.";
+        else advice = "Nothing uses it right now.";
+        if (r.stalled) advice += ` <span class="sup-stalled">${r.stalled} ${plural(r.stalled, "module")} stalled waiting for it.</span>`;
+        return `<div class="sup-row${r.more ? " is-short" : ""}">
+          <button type="button" class="net-name" data-action="inspect" data-id="${r.ware}">${W[r.ware].label}</button>
+          <span class="num">${fmtRate(r.need)}/h</span>
+          <span><span class="num">${fmtRate(r.mined)}/h</span><span class="price-sub">${r.miners} ${plural(r.miners, "miner")} worked it</span></span>
+          <span><span class="num ${r.bought ? "" : "dim"}">${fmtRate(r.bought)}/h</span>${r.buyPrice ? `<span class="price-sub">at ${fmtPrice(Math.round(r.buyPrice))}</span>` : ""}</span>
+          <span class="sup-cover"><span class="rank-bar${r.cover < 0.999 ? " is-full" : ""}"><span style="transform:scaleX(${r.cover})"></span></span><span class="num">${fmtPercent(r.cover)}</span></span>
+          <span class="sup-advice">${advice}</span>
+        </div>`;
+      }).join("")}`
+    : `<p class="quiet-note">None of your stations uses mined wares.</p>`;
+
+  const inRows = internalRows();
+  internal.innerHTML = inRows.length
+    ? `<p class="quiet-note sup-intro">Your empire sells these to NPCs and buys them back from NPCs in the same period. Feeding your own stations first keeps the difference.</p>
+      ${inRows.map((r) => `
+        <div class="int-row">
+          <div class="int-main">
+            <button type="button" class="net-name" data-action="inspect" data-id="${r.ware}">${W[r.ware].label}</button>
+            <p>Sold <span class="num">${fmtRate(r.sold)}/h</span> at ${fmtPrice(Math.round(r.sellPrice))}, bought <span class="num">${fmtRate(r.bought)}/h</span> at ${fmtPrice(Math.round(r.buyPrice))}.</p>
+            <p class="int-stations">${r.makers.length ? `Made at ${stationNames(r.makers)}.` : ""} ${r.users.length ? `Used at ${stationNames(r.users)}.` : ""}</p>
+          </div>
+          <div class="int-gain">
+            <span class="num ${r.gain > 0 ? "is-ok" : "dim"}">${r.gain > 0 ? "+" + fmtCredits(r.gain) + " Cr/h" : "no gain"}</span>
+            <span class="price-sub">keeping ${fmtRate(r.keep)}/h in house</span>
+          </div>
+        </div>`).join("")}
+      <p class="quiet-note sup-intro">In game: give the buying stations a trade rule that prefers your own faction, or assign the producing station's traders to supply them.</p>`
+    : `<p class="quiet-note">Nothing. You never sell a ware to NPCs while buying the same ware from them.</p>`;
+}
+
+/* ---------------------------------------------------------------------
+   Market opportunities: what NPC stations in this universe want more of
+   than anyone offers, and what one module of it would earn at local prices.
+--------------------------------------------------------------------- */
+
+function opportunityRows() {
+  const market = state.empire.market;
+  const flows = state.empire.flows ? state.empire.flows.wares : {};
+  // a ware counts as covered if you make it, tick it, or your miners bring it in
+  const have = (id) => isBuilt(id) || (flows[id] && flows[id].mined > 0);
+  const localBuy = (id) => (market[id] && market[id].sell ? market[id].sell.med : W[id].price.avg);
+  const rows = [];
+  for (const w of Object.values(W)) {
+    const pm = perModule(w);
+    const mk = market[w.id];
+    if (!pm || !mk || !mk.buy) continue;
+    const r = w.recipes[w.mainMethod];
+    const cycles = 3600 / r.time;
+    const inputCost = r.inputs.reduce((s, i) => s + i.amount * cycles * localBuy(i.wareID), 0);
+    const value = pm * mk.buy.med - inputCost;
+    const offered = mk.sell ? mk.sell.amount : 0;
+    const open = mk.buy.amount - offered;
+    const cost = moduleCost(w.id, w.mainMethod);
+    rows.push({
+      ware: w.id, value, wanted: mk.buy.amount, buyers: mk.buy.n, offered, open,
+      hoursOfOutput: open / pm, price: mk.buy.med, cost,
+      payback: value > 0 && cost ? cost / value : null,
+      missing: r.inputs.map((i) => i.wareID).filter((id) => !have(id)),
+      made: isBuilt(w.id),
+    });
+  }
+  // worth it: demand outstrips supply by at least half a day of one module's output
+  return rows.filter((r) => r.value > 0 && r.hoursOfOutput >= 12).sort((a, b) => b.value - a.value);
+}
+
+function renderOpportunities() {
+  const note = $("opps-note");
+  const box = $("opps-list");
+  const e = state.empire;
+  if (!e || !e.market) {
+    note.textContent = "";
+    box.innerHTML = `<p class="quiet-note">${e ? "Load your save again to see what your market wants." : "Load a save to see which wares NPC stations in your universe are short of."}</p>`;
+    return;
+  }
+  const rows = opportunityRows().slice(0, 12);
+  note.textContent = "Wares NPC stations want more of than anyone has for sale right now, ranked by what one module earns at the prices in your universe: output at the typical NPC buying price, inputs at the typical NPC selling price.";
+  box.innerHTML = rows.length
+    ? `<div class="opp-row opp-head"><span>Ware</span><span>NPCs want</span><span>For sale</span><span>One module</span><span>Inputs</span><span>Pays back</span></div>
+      ${rows.map((r) => `
+        <div class="opp-row">
+          <span class="opp-name"><button type="button" class="net-name" data-action="plan-ware" data-id="${r.ware}">${W[r.ware].label}</button>${r.made ? `<span class="tag is-plain">you make it</span>` : ""}</span>
+          <span><span class="num">${Math.round(r.wanted).toLocaleString("en-US")}</span><span class="price-sub">${r.buyers} ${plural(r.buyers, "buyer")}, about ${fmtPrice(Math.round(r.price))}</span></span>
+          <span class="num dim">${Math.round(r.offered).toLocaleString("en-US")}</span>
+          <span class="num is-ok">+${fmtCredits(r.value)} Cr/h</span>
+          <span class="opp-missing">${r.missing.length ? `Inputs you do not make yet: ${r.missing.map((id) => W[id].label).join(", ")}` : `<span class="dim">You already have every input.</span>`}</span>
+          <span><span class="num">${r.payback ? fmtHours(r.payback) : "?"}</span><span class="price-sub">${fmtCredits(r.cost)} Cr</span></span>
+        </div>`).join("")}`
+    : `<p class="quiet-note">No ware is short in your universe right now. NPC supply covers every buy order.</p>`;
 }
 
 /* ---------------------------------------------------------------------
@@ -1195,6 +1488,7 @@ function convertStation(s, i, counter) {
   }
   const cargo = {};
   for (const [w, n] of Object.entries(s.cargo || {})) if (n > 0) cargo[w] = n;
+  const workforceByRace = s.workforceByRace || {};
 
   return {
     id: s.code || `station-${i}`,
@@ -1204,6 +1498,8 @@ function convertStation(s, i, counter) {
     sunlight: sector ? sector.sunlight : 1,
     workforce: s.workforce,
     workforceNeed,
+    workforceByRace,
+    upkeep: workforceUpkeep(workforceByRace, workforceNeed),
     habitats: s.habitats,
     habitatCapacity: (s.habitats || []).reduce((a, h) => a + ((HABITATS[h] || {}).capacity || 0), 0),
     underConstruction: s.underConstruction,
@@ -1216,6 +1512,25 @@ function convertStation(s, i, counter) {
       stalled: g.stalled, short: [...g.short],
     })),
   };
+}
+
+// What a station's workers eat per hour. Workers with a job (up to what the
+// modules need) eat more than idle ones; each race has its own diet.
+function workforceUpkeep(byRace, need) {
+  const total = Object.values(byRace).reduce((a, n) => a + n, 0);
+  if (!total) return [];
+  const busy = Math.min(1, need / total);
+  const out = new Map();
+  for (const [race, n] of Object.entries(byRace)) {
+    const diet = WORKFORCE[race] || WORKFORCE.default;
+    if (!diet) continue;
+    for (const [kind, share] of [["busy", busy], ["idle", 1 - busy]]) {
+      for (const i of diet[kind] || []) {
+        if (W[i.wareID]) out.set(i.wareID, (out.get(i.wareID) || 0) + n * share * i.amount);
+      }
+    }
+  }
+  return [...out].map(([ware, amount]) => ({ ware, amount }));
 }
 
 function summariseMarket(market) {
@@ -1261,7 +1576,8 @@ async function importSave(file) {
 
   let ok = false;
   try {
-    const { stations, market, info } = await X4Save.readFile(file, onProgress);
+    const result = await X4Save.readFile(file, onProgress);
+    const { stations, market, info } = result;
     if (!stations.length && !info.version) {
       throw new Error("it does not look like an X4 save file");
     }
@@ -1280,6 +1596,7 @@ async function importSave(file) {
       skipped: counter.skipped,
       stations: converted,
       market: summariseMarket(market),
+      flows: summariseFlows(result, converted),
     };
     state.openStation = null;
     state.plan = {};
@@ -1356,6 +1673,11 @@ function bindEmpireEvents() {
       state.openStation = state.openStation === id ? null : id;
       renderStationsTab();
     } else if (action === "open-station") openStation(id);
+    else if (action === "open-tab") setEmpireTab(id);
+    else if (action === "plan-ware") {
+      state.view = "planner";
+      selectWare(id);
+    }
     else if (action === "toggle-attention") {
       state.attentionAll = !state.attentionAll;
       renderAttention();

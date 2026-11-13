@@ -4462,5 +4462,155 @@
    "capacity": 100000,
    "type": "solid"
   }
+ },
+ "workforce": {
+  "default": {
+   "busy": [
+    {
+     "wareID": "foodrations",
+     "amount": 2.25
+    },
+    {
+     "wareID": "medicalsupplies",
+     "amount": 1.35
+    }
+   ],
+   "idle": [
+    {
+     "wareID": "foodrations",
+     "amount": 1.5
+    },
+    {
+     "wareID": "medicalsupplies",
+     "amount": 0.9
+    }
+   ]
+  },
+  "paranid": {
+   "busy": [
+    {
+     "wareID": "medicalsupplies",
+     "amount": 1.35
+    },
+    {
+     "wareID": "sojahusk",
+     "amount": 1.44
+    }
+   ],
+   "idle": [
+    {
+     "wareID": "medicalsupplies",
+     "amount": 0.9
+    },
+    {
+     "wareID": "sojahusk",
+     "amount": 0.96
+    }
+   ]
+  },
+  "teladi": {
+   "busy": [
+    {
+     "wareID": "medicalsupplies",
+     "amount": 1.35
+    },
+    {
+     "wareID": "nostropoil",
+     "amount": 1.14
+    }
+   ],
+   "idle": [
+    {
+     "wareID": "medicalsupplies",
+     "amount": 0.9
+    },
+    {
+     "wareID": "nostropoil",
+     "amount": 0.75
+    }
+   ]
+  },
+  "boron": {
+   "busy": [
+    {
+     "wareID": "bofu",
+     "amount": 0.45
+    },
+    {
+     "wareID": "medicalsupplies",
+     "amount": 0.99
+    },
+    {
+     "wareID": "water",
+     "amount": 0.81
+    }
+   ],
+   "idle": [
+    {
+     "wareID": "bofu",
+     "amount": 0.3
+    },
+    {
+     "wareID": "medicalsupplies",
+     "amount": 0.66
+    },
+    {
+     "wareID": "water",
+     "amount": 0.54
+    }
+   ]
+  },
+  "split": {
+   "busy": [
+    {
+     "wareID": "cheltmeat",
+     "amount": 0.51
+    },
+    {
+     "wareID": "medicalsupplies",
+     "amount": 1.35
+    },
+    {
+     "wareID": "scruffinfruits",
+     "amount": 0.69
+    }
+   ],
+   "idle": [
+    {
+     "wareID": "cheltmeat",
+     "amount": 0.39
+    },
+    {
+     "wareID": "medicalsupplies",
+     "amount": 0.9
+    },
+    {
+     "wareID": "scruffinfruits",
+     "amount": 0.3
+    }
+   ]
+  },
+  "terran": {
+   "busy": [
+    {
+     "wareID": "medicalsupplies",
+     "amount": 1.35
+    },
+    {
+     "wareID": "terranmre",
+     "amount": 1.29
+    }
+   ],
+   "idle": [
+    {
+     "wareID": "medicalsupplies",
+     "amount": 0.9
+    },
+    {
+     "wareID": "terranmre",
+     "amount": 0.84
+    }
+   ]
+  }
  }
 }
