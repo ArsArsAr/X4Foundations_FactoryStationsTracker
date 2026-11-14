@@ -298,9 +298,18 @@ for source, data in files("libraries/mapdefaults.xml"):
         if area is not None and area.get("sunlight"):
             entry["sunlight"] = round(float(area.get("sunlight")), 3)
 
+# ---------------------------------------------------------------- faction names
+# the logbook names factions by text reference, e.g. {20203,3001}
+FACTION_TEXT = {}
+for (pid, tid) in TEXT:
+    if pid == "20203" and tid.endswith("01"):  # x01 is the name; x02 the description, x03 the short code
+        name = text(TEXT[(pid, tid)])
+        if name:
+            FACTION_TEXT["{%s,%s}" % (pid, tid)] = name
+
 # ---------------------------------------------------------------- write
 
-modules = {k: v for k, v in sorted(MODULE_MACROS.items()) if v["ware"] in wares}
+modules ={k: v for k, v in sorted(MODULE_MACROS.items()) if v["ware"] in wares}
 payload = {
     "wares": wares,
     "modules": modules,
@@ -308,6 +317,7 @@ payload = {
     "habitats": dict(sorted(HABITATS.items())),
     "storage": dict(sorted(STORAGE.items())),
     "workforce": WORKFORCE,
+    "factionText": FACTION_TEXT,
 }
 version = re.sub(r"\s+", "", open(os.path.join(GAME, "version.dat")).read())
 gamever = f"{version[0]}.{version[1:]}" if version.isdigit() else version
@@ -324,6 +334,7 @@ with open(os.path.join(PROJECT, "data", "wares.js"), "w", encoding="utf-8", newl
     f.write("const HABITATS = " + json.dumps(payload["habitats"]) + ";\n")
     f.write("const STORAGE = " + json.dumps(payload["storage"]) + ";\n")
     f.write("const WORKFORCE = " + json.dumps(WORKFORCE) + ";\n")
+    f.write("const FACTION_TEXT = " + json.dumps(FACTION_TEXT, ensure_ascii=False) + ";\n")
 
 print(f"game {gamever}: {len(wares)} wares, {len(modules)} module macros, {len(sectors)} sectors")
 print("mined:", sorted(w for w in wares if wares[w]["isMined"]))

@@ -24,12 +24,18 @@
   const unescapeXml = (s) =>
     s.replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
 
+  // mission texts also carry X4's own line breaks, written as [\012]
+  const text = (s) => (s ? unescapeXml(s).replace(/\[\\012\]/g, "\n").trim() : "");
+
   function createScanner() {
     const stack = [];      // open components: { cls, macro, station, npc, module, storage, ship }
     const stations = [];   // player stations
     const ships = [];      // player ships: { id, macro, code, name }
     const trades = [];     // economy log: [time, ware, buyerID, sellerID, price Cr, amount]
     const eco = { inLog: false, start: Infinity, end: 0 };
+    // missions: what is in progress, what is on offer, and the logbook of what was done
+    const missions = { active: [], offers: [], log: [], stats: {} };
+    const mis = { inBlock: false, mission: null, offer: null, briefing: false, thread: false };
     const market = {};     // ware -> { buy: [[price, amount, sector, owner]], sell: [...] }
     let current = null;    // nearest station entry (player or NPC) on the stack
     let sector = null;     // nearest sector macro on the stack
@@ -149,6 +155,24 @@
         return;
       }
 
+      // the player's missions: active ones, story threads and open offers
+      if (s === "<missions>") {
+        mis.inBlock = true;
+        return;
+      }
+      if (mis.inBlock) {
+        missionLine(s);
+        return;
+      }
+      if (s.startsWith("<entry ") && s.includes(' category="missions"')) {
+        missions.log.push({ time: Number(attr(s, "time")) || 0, title: text(attr(s, "title")), text: text(attr(s, "text")), faction: attr(s, "faction") });
+        return;
+      }
+      if (s.startsWith('<stat id="missions_')) {
+        missions.stats[attr(s, "id")] = Number(attr(s, "value")) || 0;
+        return;
+      }
+
       // a player ship's standing order says what it does (mining, trading...)
       if (s.startsWith("<order ") && s.includes('default="1"')) {
         for (let i = stack.length - 1; i >= 0; i--) {
@@ -231,10 +255,69 @@
       }
     }
 
+    function missionLine(s) {
+      if (s === "</missions>") {
+        mis.inBlock = false;
+        return;
+      }
+      if (s.startsWith("<offer ")) {
+        mis.offer = {
+          id: attr(s, "id"), name: text(attr(s, "name")), description: text(attr(s, "description")),
+          faction: attr(s, "faction"), type: attr(s, "type"), level: attr(s, "level"),
+          reward: Number(attr(s, "reward")) || 0, rewardtext: text(attr(s, "rewardtext")), objectives: [], subs: [],
+        };
+        missions.offers.push(mis.offer);
+        if (s.endsWith("/>")) mis.offer = null;
+      } else if (s === "</offer>") {
+        mis.offer = null;
+      } else if (s.startsWith("<mission ")) {
+        const id = attr(s, "id");
+        if (mis.offer && !id) {
+          // a guild offer lists the missions it is made of
+          mis.offer.subs.push({ name: text(attr(s, "name")), type: attr(s, "type"), reward: Number(attr(s, "reward")) || 0, rewardtext: text(attr(s, "rewardtext")) });
+        } else if (mis.thread && mis.mission) {
+          if (id) mis.mission.thread.push(id);
+        } else if (id && attr(s, "name") !== null) {
+          mis.mission = {
+            id, time: Number(attr(s, "time")) || 0, name: text(attr(s, "name")), description: text(attr(s, "description")),
+            faction: attr(s, "faction"), type: attr(s, "type"), caption: text(attr(s, "caption")),
+            reward: Number(attr(s, "reward")) || 0, rewardtext: text(attr(s, "rewardtext")),
+            alert: attr(s, "alert"), associated: attr(s, "associated"),
+            objectives: [], current: null, thread: [], parent: null,
+          };
+          missions.active.push(mis.mission);
+          if (s.endsWith("/>")) mis.mission = null;
+        }
+      } else if (s === "</mission>") {
+        mis.mission = null;
+        mis.briefing = false;
+      } else if (s === "<briefing>") {
+        mis.briefing = true;
+      } else if (s === "</briefing>") {
+        mis.briefing = false;
+      } else if (s === "<thread>") {
+        mis.thread = true;
+      } else if (s === "</thread>") {
+        mis.thread = false;
+      } else if (s.startsWith("<thread ") && mis.mission) {
+        mis.mission.parent = attr(s, "id");
+      } else if (s.startsWith("<objective ")) {
+        const target = mis.mission || mis.offer;
+        if (!target) return;
+        const step = Number(attr(s, "step")) || 0;
+        if (mis.briefing) {
+          target.objectives.push({ step, type: attr(s, "type"), text: text(attr(s, "text")), name: text(attr(s, "name")), active: attr(s, "active") === "1" });
+        } else if (mis.mission) {
+          // the objective after the briefing is the one the player is on
+          mis.mission.current = step;
+        }
+      }
+    }
+
     return {
       line,
       result: () => ({
-        stations, market, ships, trades, info: saveInfo,
+        stations, market, ships, trades, missions, info: saveInfo,
         log: { start: Number.isFinite(eco.start) ? eco.start : null, end: eco.end || null },
       }),
     };

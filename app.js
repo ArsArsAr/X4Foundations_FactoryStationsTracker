@@ -327,7 +327,7 @@ function loadUI() {
     if (!ui) return null;
     state.networkOpen = !!ui.networkOpen;
     state.view = ui.view === "empire" ? "empire" : "planner";
-    if (["overview", "stations", "supply", "logistics", "prices", "rewards"].includes(ui.empireTab)) state.empireTab = ui.empireTab;
+    if (["overview", "stations", "supply", "logistics", "prices", "missions", "rewards"].includes(ui.empireTab)) state.empireTab = ui.empireTab;
     if (typeof ui.chainRace === "string") state.chainRace = ui.chainRace;
     if (ui.chainSector && SECTORS[ui.chainSector]) {
       state.chainSector = ui.chainSector;

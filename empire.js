@@ -549,6 +549,7 @@ function renderEmpire() {
   else if (tab === "stations") renderStationsTab();
   else if (tab === "supply") renderSupply();
   else if (tab === "logistics") renderLogistics();
+  else if (tab === "missions") renderMissions();
   else if (tab === "prices") {
     renderOpportunities();
     renderPrices();
@@ -2062,6 +2063,217 @@ function stationRoutes(st) {
 }
 
 /* ---------------------------------------------------------------------
+   Missions: what is in progress (with how far along), station upkeep
+   tasks, what is on offer, and what has been done.
+
+   X4 stores each active mission with its list of steps and marks the one
+   the player is on, so progress is by step: "step 3 of 4". It does not
+   store counts inside a step (such as 12 of 21 delivered).
+--------------------------------------------------------------------- */
+
+const MISSION_TYPE = {
+  plot: "Story", fight: "Combat", destroy: "Combat", trade: "Trade", deliver: "Delivery", build: "Construction",
+  find: "Search", intelligence: "Intelligence", protect: "Protection", patrol: "Patrol", escort: "Escort",
+  think: "Project", talkto: "Talk", custom: "Task", tutorial: "Tutorial", upkeep: "Upkeep",
+};
+const LEVEL_LABEL = { trivial: "trivial", veryeasy: "very easy", easy: "easy", medium: "medium", hard: "hard", veryhard: "very hard", impossible: "impossible" };
+
+function missionFaction(id) {
+  if (!id) return "";
+  if (id.startsWith("{")) return FACTION_TEXT[id] || "";
+  if (id === "player") return "";
+  return factionLabel(id);
+}
+
+function missionType(type) {
+  if (!type) return "";
+  if (type.startsWith("upkeep")) return "Upkeep";
+  return MISSION_TYPE[type] || type.charAt(0).toUpperCase() + type.slice(1);
+}
+
+// done steps, the current one and the total, from the briefing
+function missionProgress(m) {
+  const steps = [...m.objectives].sort((a, b) => a.step - b.step);
+  if (!steps.length) return null;
+  const total = steps[steps.length - 1].step || steps.length;
+  const active = steps.find((o) => o.active);
+  const current = m.current || (active ? active.step : steps[0].step);
+  // finished steps count in full, the one in progress counts half
+  return { steps, total, current, done: Math.max(0, current - 1), fraction: Math.min(1, Math.max(0, (current - 0.5) / total)) };
+}
+
+// condensed at import
+function summariseMissions(raw, info, converted, result) {
+  if (!raw) return null;
+  const now = Number(info.time) || 0;
+  const stationNames = new Map();
+  result.stations.forEach((s, i) => { if (s.id) stationNames.set(s.id, converted[i]); });
+  const keep = (m) => ({
+    id: m.id, name: m.name, description: m.description, faction: m.faction, type: m.type, caption: m.caption,
+    reward: m.reward, rewardtext: m.rewardtext, age: m.time ? (now - m.time) / 3600 : null,
+    objectives: m.objectives, current: m.current, thread: m.thread, parent: m.parent,
+  });
+  const upkeep = new Map();
+  const active = [];
+  for (const m of raw.active) {
+    if (String(m.type).startsWith("upkeep")) {
+      // one row per kind of task: "Transfer credits to X" all go under "Transfer credits"
+      const credits = m.type === "upkeep_credits";
+      const key = credits ? m.name.replace(/ to .*$/, "") : m.name;
+      const g = upkeep.get(key) || { name: key, type: m.type, count: 0, where: [], alert: m.alert };
+      g.count++;
+      const st = stationNames.get(m.associated);
+      const where = credits ? m.name.replace(/^.* to /, "") : st ? stationLabel(st) : (m.objectives[0] && (m.objectives[0].text || m.objectives[0].name)) || "";
+      if (where && !g.where.includes(where)) g.where.push(where);
+      upkeep.set(key, g);
+    } else {
+      active.push(keep(m));
+    }
+  }
+  const offers = raw.offers.map((o) => ({
+    name: o.name, description: o.description, faction: o.faction, type: o.type, level: o.level,
+    reward: o.reward + o.subs.reduce((s, x) => s + x.reward, 0), rewardtext: o.rewardtext, subs: o.subs,
+    kind: o.type === "tutorial" ? "tutorial" : / vs\. /i.test(o.name) ? "war" : o.type === "think" ? "project" : o.subs.length ? "guild" : "offer",
+  }));
+  return {
+    active, offers,
+    upkeep: [...upkeep.values()].sort((a, b) => b.count - a.count),
+    log: raw.log.map((e) => ({ ...e, ago: (now - e.time) / 3600 })),
+    stats: raw.stats, gameTime: now,
+  };
+}
+
+// the logbook boiled down to one line per mission, newest first
+function missionHistory(mis) {
+  const activeNames = new Set(mis.active.map((m) => m.name));
+  const byTitle = new Map();
+  for (const e of [...mis.log].sort((a, b) => a.time - b.time)) {
+    let status = "chapter";
+    if (e.text === "Mission completed.") status = "completed";
+    else if (e.text === "Mission aborted.") status = "aborted";
+    else if (e.text === "Mission failed.") status = "failed";
+    else if (e.text === "Mission accepted.") status = "accepted";
+    if (status === "chapter") {
+      byTitle.set(`${e.title}|${e.time}`, { ...e, status });
+    } else {
+      byTitle.set(e.title, { ...e, status });
+    }
+  }
+  return [...byTitle.values()]
+    .filter((e) => !(e.status === "accepted" && activeNames.has(e.title)))
+    .sort((a, b) => b.time - a.time);
+}
+
+function fmtAgo(hours) {
+  if (hours === null || hours === undefined) return "";
+  if (hours < 1) return "under an hour ago";
+  return `${fmtHours(hours)} ago`;
+}
+
+function missionCard(m, children) {
+  const p = missionProgress(m);
+  const faction = missionFaction(m.faction);
+  const meta = [missionType(m.type), faction, m.caption && m.caption !== faction ? m.caption : ""].filter(Boolean).join(", ");
+  const reward = [m.reward ? `${fmtCredits(m.reward)} Cr` : "", m.rewardtext].filter(Boolean).join(" and ");
+  const steps = p
+    ? `<ol class="m-steps">${p.steps.map((o) => {
+        const cls = o.step < p.current ? "is-done" : o.step === p.current ? "is-current" : "is-next";
+        const label = [o.name, o.text].filter(Boolean).join(": ") || missionType(o.type);
+        return `<li class="${cls}"><span class="m-dot">${o.step < p.current ? icon("check", 10) : ""}</span><span>${escapeHTML(label)}</span></li>`;
+      }).join("")}</ol>`
+    : "";
+  const bar = p
+    ? `<div class="m-progress"><div class="rank-bar"><span style="transform:scaleX(${p.fraction})"></span></div><span class="num">Step ${p.current} of ${p.total}</span></div>`
+    : children && children.length
+      ? `<p class="quiet-note">${children.length} ${plural(children.length, "mission")} open in this story.</p>`
+      : "";
+  return `<article class="m-card${children ? " is-thread" : ""}">
+    <div class="m-head">
+      <div>
+        <h3>${escapeHTML(m.name)}</h3>
+        <p class="m-meta">${escapeHTML(meta)}${m.age !== null ? ` <span class="dim">accepted ${fmtAgo(m.age)}</span>` : ""}</p>
+      </div>
+      ${reward ? `<span class="m-reward">${escapeHTML(reward)}</span>` : ""}
+    </div>
+    ${bar}
+    ${steps}
+    ${m.description ? `<details class="m-desc"><summary>Briefing</summary><p>${escapeHTML(m.description)}</p></details>` : ""}
+    ${children && children.length ? `<div class="m-children">${children.map((c) => missionCard(c)).join("")}</div>` : ""}
+  </article>`;
+}
+
+function renderMissions() {
+  const box = $("missions-body");
+  const e = state.empire;
+  if (!e || !e.missions) {
+    box.innerHTML = `<p class="quiet-note">${e ? "Load your save again to see your missions. This empire was read by an older version." : "Load a save to see the missions you are on, what is on offer and what you have done."}</p>`;
+    return;
+  }
+  const mis = e.missions;
+  const byId = new Map(mis.active.map((m) => [m.id, m]));
+  const children = (m) => m.thread.map((id) => byId.get(id)).filter(Boolean);
+  const roots = mis.active.filter((m) => !m.parent || !byId.has(m.parent));
+  const story = roots.filter((m) => m.type === "plot");
+  const other = roots.filter((m) => m.type !== "plot");
+  const history = missionHistory(mis);
+  const done = history.filter((h) => h.status === "completed" || h.status === "chapter");
+  const offers = mis.offers.filter((o) => o.kind !== "tutorial");
+  const tutorials = mis.offers.filter((o) => o.kind === "tutorial");
+  const completed = mis.stats.missions_completed;
+
+  const summary = `<div class="m-summary">
+    <div><span class="num">${mis.active.length}</span><span>in progress</span></div>
+    <div><span class="num">${done.length}</span><span>done in your log${completed !== undefined ? `, ${completed} regular ${plural(completed, "mission")} completed in total` : ""}</span></div>
+    <div><span class="num">${offers.length}</span><span>on offer</span></div>
+    ${mis.upkeep.length ? `<div><span class="num">${mis.upkeep.reduce((s, g) => s + g.count, 0)}</span><span>upkeep tasks</span></div>` : ""}
+  </div>`;
+
+  const inProgress = mis.active.length
+    ? (story.length ? `<h3 class="m-group">Story</h3>${story.map((m) => missionCard(m, children(m))).join("")}` : "") +
+      (other.length ? `<h3 class="m-group">Other missions</h3>${other.map((m) => missionCard(m, children(m).length ? children(m) : null)).join("")}` : "")
+    : `<p class="quiet-note">No missions in progress.</p>`;
+
+  const upkeep = mis.upkeep.length
+    ? `<div class="m-upkeep">${mis.upkeep.map((g) => `
+        <details class="m-up"><summary><span class="m-up-name">${escapeHTML(g.name)}</span><span class="num dim">${g.count}</span></summary>
+          <p class="quiet-note">${g.where.slice(0, 12).map(escapeHTML).join(", ")}${g.where.length > 12 ? ` and ${g.where.length - 12} more` : ""}</p>
+        </details>`).join("")}</div>`
+    : `<p class="quiet-note">Nothing to restock, hire or pay for.</p>`;
+
+  const KIND = { offer: "Missions with a reward", guild: "Guild missions", war: "Faction war contracts", project: "Projects" };
+  const offerList = Object.entries(KIND).map(([kind, title]) => {
+    const list = offers.filter((o) => o.kind === kind).sort((a, b) => b.reward - a.reward);
+    if (!list.length) return "";
+    return `<h3 class="m-group">${title} <span class="num dim">${list.length}</span></h3>
+      ${list.map((o) => `<div class="m-offer">
+        <span class="m-offer-name">${escapeHTML(o.name)}${o.subs.length ? `<span class="price-sub">${o.subs.map((x) => escapeHTML(x.name)).join(", ")}</span>` : ""}</span>
+        <span class="dim">${escapeHTML([missionType(o.type), missionFaction(o.faction)].filter(Boolean).join(", "))}</span>
+        <span class="dim">${LEVEL_LABEL[o.level] || o.level || ""}</span>
+        <span class="num">${o.reward ? fmtCredits(o.reward) + " Cr" : ""}${o.rewardtext ? `<span class="price-sub">${escapeHTML(o.rewardtext)}</span>` : ""}</span>
+      </div>`).join("")}`;
+  }).join("") + (tutorials.length ? `<p class="quiet-note m-tut">${tutorials.length} ${plural(tutorials.length, "tutorial")} not done yet: ${tutorials.map((t) => escapeHTML(t.name.replace(/^\d+\)\s*/, ""))).join(", ")}.</p>` : "");
+
+  const shown = state.historyAll ? history : history.slice(0, 25);
+  const STATUS = { completed: ["is-ok", "done"], chapter: ["is-ok", "story"], aborted: ["is-plain", "aborted"], failed: ["is-short", "failed"], accepted: ["is-plain", "accepted"] };
+  const log = history.length
+    ? `<ul class="m-log">${shown.map((h) => {
+        const [cls, label] = STATUS[h.status];
+        const faction = missionFaction(h.faction);
+        return `<li><span class="tag ${cls}">${label}</span><span class="m-log-text"><strong>${escapeHTML(h.title)}</strong>${h.status === "chapter" ? ` ${escapeHTML(h.text)}` : ""}<span class="price-sub">${escapeHTML(faction)}${faction ? ", " : ""}${fmtAgo(h.ago)}</span></span></li>`;
+      }).join("")}</ul>
+      ${history.length > 25 ? `<button type="button" class="btn is-small is-ghost" data-action="toggle-history">${state.historyAll ? "Show fewer" : `Show all ${history.length}`}</button>` : ""}`
+    : `<p class="quiet-note">Your logbook has no missions yet.</p>`;
+
+  box.innerHTML = `${summary}
+    <section aria-labelledby="m-progress-title"><div class="stations-head"><h2 id="m-progress-title">In progress</h2></div>
+      <p class="quiet-note prices-note">X4 tracks a mission by its steps, so progress is shown as the step you are on. Counts inside a step (such as 12 of 21 delivered) are not stored in the save.</p>
+      ${inProgress}</section>
+    <section class="section-gap" aria-labelledby="m-upkeep-title"><div class="stations-head"><h2 id="m-upkeep-title">Station and ship upkeep</h2></div>${upkeep}</section>
+    <section class="section-gap" aria-labelledby="m-offers-title"><div class="stations-head"><h2 id="m-offers-title">On offer</h2></div>${offerList || `<p class="quiet-note">No offers right now.</p>`}</section>
+    <section class="section-gap" aria-labelledby="m-done-title"><div class="stations-head"><h2 id="m-done-title">Done</h2></div>${log}</section>`;
+}
+
+/* ---------------------------------------------------------------------
    Rewards: level ladder and achievements
 --------------------------------------------------------------------- */
 
@@ -2508,6 +2720,7 @@ async function importSave(file) {
       stations: converted,
       market: summariseMarket(market),
       flows: summariseFlows(result, converted),
+      missions: summariseMissions(result.missions, info, converted, result),
     };
     state.openStation = null;
     state.plan = {};
@@ -2588,7 +2801,7 @@ function bindEmpireEvents() {
     else state.openGroups.delete(d.dataset.key);
   }, true);
   // 1 to 5 switch Empire tabs
-  const TAB_KEYS = ["overview", "stations", "supply", "logistics", "prices", "rewards"];
+  const TAB_KEYS = ["overview", "stations", "supply", "logistics", "prices", "missions", "rewards"];
   document.addEventListener("keydown", (e) => {
     if (state.view !== "empire" || !$("modal").hidden || e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement || e.target instanceof HTMLTextAreaElement) return;
@@ -2632,6 +2845,10 @@ function bindEmpireEvents() {
       selectWare(id);
     }
     else if (action === "hub-remove") setHub(id, false);
+    else if (action === "toggle-history") {
+      state.historyAll = !state.historyAll;
+      renderMissions();
+    }
     else if (action === "toggle-fleet") {
       state.fleetAll = !state.fleetAll;
       renderFleet();

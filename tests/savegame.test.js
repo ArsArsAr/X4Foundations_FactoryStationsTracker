@@ -71,6 +71,48 @@ const SAVE = `<?xml version="1.0" encoding="UTF-8"?>
 </component>
 </component>
 </universe>
+<missions>
+<offer id="9" actor="[0x50]" name="Help Trade Operation" description="A guild job" faction="teladi" type="trade" level="easy">
+<briefing>
+<mission name="Identify Profitable Regions" description="" faction="teladi" type="trade" reward="81280" rewardtext="High Energy Catalyst" index="1"/>
+</briefing>
+</offer>
+<mission id="100" time="3600" name="Boarding Operation" description="Lend aid.[\\012]Target: Okinawa" faction="player" type="fight" abortable="0">
+<briefing>
+<objective step="1" type="destroy" text="Turrets"/>
+<objective step="2" type="protect" text="Boarding Pods"/>
+<objective step="3" type="custom" name="Damage" text="Hull to 80%" active="1"/>
+<objective step="4" type="protect" text="Okinawa">
+<targets>
+<target id="[0x60]"/>
+</targets>
+</objective>
+</briefing>
+<objective step="3" type="custom" name="Damage" text="Hull to 80%">
+</objective>
+</mission>
+<mission id="200" time="3600" name="A Pirate's Life" description="Story" faction="{20203,3001}" type="plot">
+<thread>
+<mission id="201"/>
+</thread>
+</mission>
+<mission id="201" time="3600" name="High-Tech Hold-Up" description="Sub" faction="{20203,3001}" type="plot">
+<briefing>
+<objective step="1" type="talkto" text="Ace" active="1">
+</objective>
+</briefing>
+<thread id="200"/>
+</mission>
+</missions>
+<logbook>
+<entry time="100" category="missions" title="Shields Down!" text="Mission accepted." faction="{20203,201}"/>
+<entry time="200" category="missions" title="Shields Down!" text="Mission completed." faction="{20203,201}"/>
+<entry time="300" category="news" title="Not a mission" text="x"/>
+</logbook>
+<stats>
+<stat id="missions_accepted" value="16"/>
+<stat id="missions_completed" value="15"/>
+</stats>
 <economylog>
 <entries>
 <log time="3600" type="trade" owner="[0x10]" ware="water" v="5"/>
@@ -139,4 +181,25 @@ test("reads completed trades from the economy log and the save header", async ()
   assert.equal(info.name, "Test & save");
   assert.equal(info.time, "7200");
   assert.equal(log.end, 3600);
+});
+
+test("reads missions: steps, the current step, story threads and offers", async () => {
+  const { missions } = await scan(SAVE);
+  assert.equal(missions.active.length, 3);
+  const boarding = missions.active[0];
+  assert.equal(boarding.name, "Boarding Operation");
+  assert.equal(boarding.description, "Lend aid.\nTarget: Okinawa", "X4 line breaks become real ones");
+  assert.deepEqual(boarding.objectives.map((o) => o.step), [1, 2, 3, 4]);
+  assert.equal(boarding.current, 3, "the objective after the briefing is the current step");
+  assert.deepEqual(missions.active[1].thread, ["201"], "a story lists its open sub-missions");
+  assert.equal(missions.active[2].parent, "200", "and a sub-mission points back to its story");
+  assert.equal(missions.offers.length, 1);
+  assert.deepEqual(missions.offers[0].subs.map((x) => x.name), ["Identify Profitable Regions"]);
+  assert.equal(missions.offers[0].subs[0].reward, 81280);
+});
+
+test("reads the mission logbook and mission stats", async () => {
+  const { missions } = await scan(SAVE);
+  assert.deepEqual(missions.log.map((e) => e.text), ["Mission accepted.", "Mission completed."], "only mission entries");
+  assert.deepEqual(missions.stats, { missions_accepted: 16, missions_completed: 15 });
 });

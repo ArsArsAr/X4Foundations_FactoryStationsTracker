@@ -158,3 +158,30 @@ test("own-price earnings leave trades between your own stations out", () => {
   close(get("empireOwnProfit")(), (made - 100) * 10, "net surplus at the selling price");
   state.empire = null;
 });
+
+test("mission progress counts finished steps and half of the current one", () => {
+  const progress = get("missionProgress");
+  const steps = [1, 2, 3, 4].map((step) => ({ step, active: step === 3 }));
+  const p = progress({ objectives: steps, current: 3 });
+  assert.equal(p.current, 3);
+  assert.equal(p.total, 4);
+  assert.equal(p.done, 2);
+  close(p.fraction, 2.5 / 4, "two done and one under way");
+  assert.equal(progress({ objectives: steps, current: null }).current, 3, "falls back to the active flag");
+  assert.equal(progress({ objectives: [], current: null }), null, "a story with no steps of its own");
+});
+
+test("mission history keeps the last state of each mission", () => {
+  const history = get("missionHistory")({
+    active: [{ name: "Still Going" }],
+    log: [
+      { time: 1, title: "Shields Down!", text: "Mission accepted." },
+      { time: 2, title: "Shields Down!", text: "Mission completed." },
+      { time: 3, title: "Still Going", text: "Mission accepted." },
+      { time: 4, title: "Defenders of Sol", text: "The threat is subdued." },
+      { time: 5, title: "Gave Up", text: "Mission aborted." },
+    ],
+  });
+  assert.deepEqual([...history.map((h) => `${h.title}:${h.status}`)], ["Gave Up:aborted", "Defenders of Sol:chapter", "Shields Down!:completed"],
+    "newest first; an accepted mission that is still active is not listed as done");
+});

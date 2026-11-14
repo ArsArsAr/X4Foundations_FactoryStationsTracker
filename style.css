@@ -1792,6 +1792,96 @@ details[open] > summary.issue { background: var(--surface-2); }
   .fl-head > :last-child { display: none; }
 }
 
+/* ---------- missions ---------- */
+
+.m-summary { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 22px; }
+.m-summary > div {
+  display: grid;
+  gap: 2px;
+  min-width: 120px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  color: var(--text-3);
+  font-size: 12px;
+}
+.m-summary .num { color: var(--text); font-size: 22px; font-weight: 500; line-height: 1.1; }
+
+.m-group { margin: 16px 0 8px; color: var(--text-2); font-size: 13px; font-weight: 600; }
+.m-group .num { margin-left: 4px; font-weight: 400; }
+
+.m-card {
+  margin-bottom: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+}
+.m-card.is-thread { border-color: var(--line-strong); }
+.m-children { display: grid; gap: 8px; margin-top: 12px; padding-left: 14px; border-left: 1px solid var(--line); }
+.m-children .m-card { margin: 0; background: var(--surface-2); }
+
+.m-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.m-head h3 { font-size: 14.5px; font-weight: 600; }
+.m-meta { margin-top: 2px; color: var(--text-2); font-size: 12px; }
+.m-meta .dim { margin-left: 6px; color: var(--text-3); }
+.m-reward { flex-shrink: 0; max-width: 40%; color: var(--accent); font-family: var(--font-num); font-size: 12.5px; text-align: right; }
+
+.m-progress { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; margin-top: 12px; }
+.m-progress .num { color: var(--text-2); font-size: 12px; }
+
+.m-steps { display: grid; gap: 4px; margin: 10px 0 0; padding: 0; list-style: none; }
+.m-steps li { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 8px; align-items: start; color: var(--text-3); font-size: 12.5px; line-height: 1.45; }
+.m-dot {
+  display: grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  margin-top: 2px;
+  border: 1.5px solid var(--line-strong);
+  border-radius: 50%;
+  color: var(--accent-ink);
+}
+.m-steps li.is-done { color: var(--text-2); }
+.m-steps li.is-done .m-dot { border-color: var(--accent); background: var(--accent); }
+.m-steps li.is-current { color: var(--text); font-weight: 500; }
+.m-steps li.is-current .m-dot { border-color: var(--accent); box-shadow: inset 0 0 0 3px var(--surface), inset 0 0 0 7px var(--accent); }
+
+.m-desc { margin-top: 10px; }
+.m-desc summary { color: var(--text-3); font-size: 12px; cursor: pointer; }
+.m-desc p { margin-top: 6px; max-width: 80ch; color: var(--text-2); font-size: 12.5px; line-height: 1.55; white-space: pre-line; }
+
+.m-upkeep { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 6px; }
+.m-up { padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--r-control); }
+.m-up summary { display: flex; justify-content: space-between; gap: 10px; font-size: 12.5px; cursor: pointer; list-style: none; }
+.m-up summary::-webkit-details-marker { display: none; }
+.m-up .quiet-note { margin-top: 6px; font-size: 11.5px; line-height: 1.5; }
+
+.m-offer {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) 84px 120px;
+  align-items: start;
+  gap: 12px;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12.5px;
+}
+.m-offer > span { display: grid; min-width: 0; }
+.m-offer .dim { color: var(--text-3); }
+.m-offer > .num { text-align: right; color: var(--accent); }
+.m-offer-name { font-weight: 500; }
+.m-tut { margin-top: 12px; line-height: 1.55; }
+
+.m-log { display: grid; gap: 2px; margin: 0 0 8px; padding: 0; list-style: none; }
+.m-log li { display: grid; grid-template-columns: 70px minmax(0, 1fr); gap: 10px; align-items: start; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 12.5px; color: var(--text-2); line-height: 1.5; }
+.m-log .tag { justify-self: start; margin-top: 1px; }
+.m-log strong { color: var(--text); font-weight: 600; }
+.m-log-text { display: grid; }
+
+@media (max-width: 1100px) {
+  .m-offer { grid-template-columns: minmax(0, 1fr) 84px 110px; }
+  .m-offer > :nth-child(2) { display: none; }
+}
+
 /* ---------- achievements ---------- */
 
 .achievements { margin-top: 28px; }
@@ -1955,3 +2045,4 @@ a.btn { text-decoration: none; }
   *::before,
   *::after { transition: none !important; animation: none !important; }
 }
+.m-offer .price-sub { white-space: normal; text-overflow: clip; }
