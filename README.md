@@ -16,11 +16,14 @@ X4's economy is a real dependency graph. Almost everything needs Energy Cells, m
 - **Needs attention.** What is going wrong right now, grouped by cause: a mining shortfall with the stations it stalls, low stock, nearly full storage, stations short of workers (with what full staff would add after feeding them). Open a cause to see its stations and jump to one.
 - **Mining coverage.** From the trade log in your save (roughly the last game day), how much of each ore, gas and ice your stations use, how much your miners actually delivered, what you bought from NPCs, how many modules are stalled for it, and about how many more miners would close the gap.
 - **Bought and sold at the same time.** Wares your empire sells to NPCs while also buying them back from NPCs, at the real prices in the log, and what supplying your own stations first would keep.
+- **Logistics and distribution hubs.** A hub is your own station that stores wares and passes them on, so traders can be assigned to one hub instead of to every factory. Hubs are found automatically (no production, storage, traffic in the log, or a name like "Distro" or "Hub"), and you can track any station. Each hub shows what comes in and goes out per hour, stock and how long it lasts, how fast storage fills, where it gets wares and where it delivers, how many of your miners and traders work for it, and what to fix: stock your factories are stalled for, storage about to fill, wares with no sell offer. **Who runs your transport** shows which stations still run their own traders although a hub already moves their wares. **Deliveries between your stations** lists every route your ships run. Routes come from following each of your ships in the trade log, from where it loaded a ware to where it delivered it.
 - **What your market wants.** Wares NPC stations in your universe want more of than anyone has for sale, ranked by what one module would earn at local prices, with the inputs you do not make yet and the payback time.
 - **Price check.** Your stations' buy and sell prices next to every NPC buyer and seller in your save, per ware. It points out where you undercut everyone and could ask more, where you overpay, and where you are priced out, with the gain per hour. It uses your universe's economy, not wiki averages.
 - **What-if plan.** Add or remove modules on any station and see the change in earnings, the build cost, how long it takes to pay for itself, which wares would fall short, and whether it gets you to the next level.
 - **Earnings over time.** Every save you load adds a point to a chart, with the change since the save before.
 - **Empire level.** Your estimated earnings per hour put you on one of twenty levels, from **Space Toddler** to **Super Mega Duper Huge Empire** (a trillion credits per hour), with progress to the next one. Every level has its own badge: iron, bronze, silver, gold and platinum frames with a level icon, and a gold crown on level 20. Your badge sits in the top bar, and the Empire view shows the ladder. Levels you have not reached stay locked, so each new badge is a surprise, and crossing one plays a small level-up reveal. Fifteen **achievements** (First Brick, Megafactory, Cash Cow, Billionaire and more) sit next to the ladder. **Share card** makes a PNG of your badge, earnings and top stations for Reddit or Discord.
+- **Actual earnings.** Next to the estimates, what really happened in the save's trade log: credits your empire took from and paid to NPC stations per hour, and each station's own books (sales minus purchases at real prices). Stations that build ships are marked, because ship sales are not in the trade log.
+- **Ships.** Every freighter and mining ship's standing order checked against what it did in the trade log: ships idle on Wait or with no order, ships on a trade or mining order that made no trades, ships that went quiet for hours, and miners on a well covered ware while another of the same kind runs short.
 - **Per-station earnings.** Every station with its estimated value per hour, at average prices and at its own trade prices. Open one to see each module group (count, efficiency, output, value), what it ships in and out, how long its stock lasts, and how full its storage is.
 - **Production chains as a diagram.** Every input of a ware, tier by tier, down to raw materials, sized for the output you want, in modules or units per hour. Each node shows modules needed versus built and flags shortfalls. Hover a node to see how much flows along each connection.
 - **Race recipes and sunlight.** Teladi Hull Parts, Terran Energy Cells and the other race variants use their own inputs and yields wherever your save says they are in use. In the planner you can pick a race's recipes for a whole chain, and the sector your solar plants sit in (sunlight comes from the game files).
@@ -36,10 +39,10 @@ X4's economy is a real dependency graph. Almost everything needs Energy Cells, m
 
 ### Using it
 
-- **Empire** (top bar) has five tabs. **Overview**: level, earnings, what needs attention, earnings over time. **Stations**: every station; open one to see its detail and use the plus and minus buttons to plan changes. **Supply**: mining coverage and wares you buy and sell at the same time. **Market**: what NPCs are short of, and your prices against theirs. **Rewards**: levels and achievements.
+- **Empire** (top bar) has six tabs. **Overview**: level, earnings, what needs attention, earnings over time. **Stations**: every station; open one to see its detail and use the plus and minus buttons to plan changes. **Supply**: mining coverage and wares you buy and sell at the same time. **Logistics**: distribution hubs, who runs your transport, ships that are idle or stuck, and the routes between your stations. **Market**: what NPCs are short of, and your prices against theirs. **Rewards**: levels and achievements.
 - **Planner**: find a ware in the left list (press `/` to search), click its name, and set a target. Each node shows the hourly rate needed and the modules needed versus built.
 - **Click any node or ware** for full details (`Esc` closes them). From the details panel, **Plan this chain** opens it in the Planner.
-- **Keys:** `/` searches wares (or filters stations in the Empire view), `1` to `5` switch Empire tabs.
+- **Keys:** `/` searches wares (or filters stations in the Empire view), `1` to `6` switch Empire tabs.
 - **Stations** can be sorted by any column and filtered by name, sector or ware. Hover a dotted column title for what it means. The what-if plan is kept until you clear it or load a new save.
 - **My network** (bottom): supply and demand across everything you have built.
 - Load a newer save whenever you have played more. Built counts you change by hand afterwards are kept on top of the save until the next load.
@@ -74,6 +77,11 @@ No build tooling for the app. It is vanilla HTML/CSS/JS, kept that way on purpos
   X4_GAME_DIR="D:/SteamLibrary/steamapps/common/X4 Foundations" python tools/build_data.py
   ```
 - `fonts/`: self-hosted webfonts and their licence
+- `tests/`: automated tests, run with Node's built-in test runner (nothing to install):
+  ```bash
+  node --test "tests/*.test.js"
+  ```
+  `savegame.test.js` reads a small hand-written save with every element the app uses; `logic.test.js` loads the real app scripts into a sandbox and checks the chain maths, levels, worker upkeep, ship roles, route tracing, actual earnings and own-price earnings against the real game data.
 
 **Data model** (one entry per ware):
 
@@ -98,14 +106,15 @@ No build tooling for the app. It is vanilla HTML/CSS/JS, kept that way on purpos
 
 Tier 0 is not the same thing as "mined". Energy Cells is tier 0 (a Solar Power Plant needs no material inputs) but is a real built module with a sunlight-scaled rate. The UI uses `isMined`, not `tier`, to decide whether a ware gets a plain "I have a source" tick or a module count.
 
-**Saved data** lives in `localStorage`: `x4-factories-planner:module-counts` (built modules), `x4-factories-planner:empire` (stations and market summary from the last save), `x4-factories-planner:history` (earnings per loaded save), `x4-factories-planner:progress` (highest level and achievements earned), `x4-factories-planner:plan` (the what-if plan) and `x4-factories-planner:ui` (open chain, target, view, chain options). The remembered save folder is kept in IndexedDB. If storage is unavailable the app still works, it just does not remember.
+**Saved data** lives in `localStorage`: `x4-factories-planner:module-counts` (built modules), `x4-factories-planner:empire` (stations and market summary from the last save), `x4-factories-planner:history` (earnings per loaded save), `x4-factories-planner:progress` (highest level and achievements earned), `x4-factories-planner:plan` (the what-if plan), `x4-factories-planner:hubs` (stations you track or untrack as hubs) and `x4-factories-planner:ui` (open chain, target, view, chain options). The remembered save folder is kept in IndexedDB. If storage is unavailable the app still works, it just does not remember.
 
-**Caching note**: if you edit the app's files and a reload does not pick up the change, bump the `?v=25` query string on the `<link>`/`<script>` tags in `index.html`.
+**Caching note**: if you edit the app's files and a reload does not pick up the change, bump the `?v=29` query string on the `<link>`/`<script>` tags in `index.html`.
 
 ## Known limitations
 
 - **Prices are a snapshot.** The price check and own-price earnings use the offers in the save at the moment it was written. Stations on automatic pricing move their prices with their stock.
-- **Supply is measured empire-wide.** Most goods travel through your own ships, and X4's trade log cannot say which station a ship's NPC purchase finally went to, so mining coverage and the bought-and-sold list compare your whole empire with the outside world rather than one station at a time. "Needed" assumes every module runs.
+- **Ships are sorted by their standing order, not their hull.** Only mining ships can carry ore and gas, so mining ships set to trade (TradeRoutine) count as traders that haul raw materials, and only ships on MiningRoutine count as mining.
+- **Routes and ship homes are read from behaviour.** X4 keeps ship assignments in script state, so a ship's home is the station it traded with most in the trade log, and a route is matched from a ship's loads to its deliveries (oldest load first). Loads made before the log starts show as "earlier loads". "Needed" assumes every module runs.
 - **Scrap recyclers are not modelled.** They have no fixed recipe, so a save import skips them and says so.
 - **Earnings are estimates** at average prices (see above). Hand-entered modules count at 100% efficiency; modules from a save use the efficiency the game recorded.
 - **Built for a desktop window.** Narrow windows still work, but it is not a phone layout.

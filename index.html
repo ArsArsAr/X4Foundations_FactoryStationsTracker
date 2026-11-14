@@ -7,7 +7,7 @@
 <meta name="description" content="Production chain planner for X4: Foundations. See what a ware needs, track what you have built, find shortfalls.">
 <title>X4 Factories Planner</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23131619'/%3E%3Cpath d='M11 10h5v6h5M11 22h5v-6' fill='none' stroke='%2339414a' stroke-width='2'/%3E%3Crect x='5' y='7' width='7' height='6' rx='1.5' fill='%23a9b1ba'/%3E%3Crect x='5' y='19' width='7' height='6' rx='1.5' fill='%23a9b1ba'/%3E%3Crect x='20' y='12' width='8' height='8' rx='2' fill='%234fcab9'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="style.css?v=25">
+<link rel="stylesheet" href="style.css?v=29">
 </head>
 <body>
 <div id="app">
@@ -100,8 +100,9 @@
         <button type="button" data-tab="overview" aria-pressed="true" title="Press 1">Overview</button>
         <button type="button" data-tab="stations" aria-pressed="false" title="Press 2">Stations</button>
         <button type="button" data-tab="supply" aria-pressed="false" title="Press 3">Supply</button>
-        <button type="button" data-tab="prices" aria-pressed="false" title="Press 4">Market</button>
-        <button type="button" data-tab="rewards" aria-pressed="false" title="Press 5">Rewards</button>
+        <button type="button" data-tab="logistics" aria-pressed="false" title="Press 4">Logistics</button>
+        <button type="button" data-tab="prices" aria-pressed="false" title="Press 5">Market</button>
+        <button type="button" data-tab="rewards" aria-pressed="false" title="Press 6">Rewards</button>
         <span class="save-age" id="save-age" hidden></span>
       </nav>
 
@@ -164,6 +165,34 @@
             <h2 id="internal-title">Bought and sold at the same time</h2>
           </div>
           <div id="internal-list"></div>
+        </section>
+      </div>
+
+      <div class="tab-panel" data-panel="logistics" hidden>
+        <p class="quiet-note prices-note" id="logistics-note"></p>
+        <section aria-labelledby="hubs-title">
+          <div class="stations-head">
+            <h2 id="hubs-title">Distribution hubs</h2>
+          </div>
+          <div id="hub-list"></div>
+        </section>
+        <section class="section-gap" aria-labelledby="transport-title">
+          <div class="stations-head">
+            <h2 id="transport-title">Who runs your transport</h2>
+          </div>
+          <div id="transport-list"></div>
+        </section>
+        <section class="section-gap" aria-labelledby="fleet-title">
+          <div class="stations-head">
+            <h2 id="fleet-title">Ships</h2>
+          </div>
+          <div id="fleet-list"></div>
+        </section>
+        <section class="section-gap" aria-labelledby="routes-title">
+          <div class="stations-head">
+            <h2 id="routes-title">Deliveries between your stations</h2>
+          </div>
+          <div id="route-list"></div>
         </section>
       </div>
 
@@ -235,11 +264,11 @@
   </div>
 </div>
 
-<script src="data/wares.js?v=25"></script>
-<script src="savegame.js?v=25"></script>
-<script src="badges.js?v=25"></script>
-<script src="app.js?v=25"></script>
-<script src="empire.js?v=25"></script>
+<script src="data/wares.js?v=29"></script>
+<script src="savegame.js?v=29"></script>
+<script src="badges.js?v=29"></script>
+<script src="app.js?v=29"></script>
+<script src="empire.js?v=29"></script>
 <script>init();</script>
 </body>
 </html>

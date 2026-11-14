@@ -72,7 +72,8 @@
         const entry = { cls, macro, ship: cls.startsWith("ship_") };
         if (entry.ship && attr(s, "owner") === "player") {
           const name = attr(s, "name");
-          ships.push({ id: attr(s, "id"), macro, code: attr(s, "code"), name: name ? unescapeXml(name) : null });
+          entry.playerShip = { id: attr(s, "id"), macro, code: attr(s, "code"), name: name ? unescapeXml(name) : null, order: null };
+          ships.push(entry.playerShip);
         }
 
         if (cls === "station") {
@@ -91,6 +92,7 @@
               storage: [],      // storage macros
               workforce: 0,
               workforceByRace: {}, // race -> workers
+              buildProcessors: 0,  // ship building (wharf, shipyard, equipment dock)
               cargo: {},        // ware -> amount in stock
               offers: [],       // { side, ware, price, amount, desired } price in Cr
               overrides: {},    // ware -> { buy, sell } manual prices in Cr
@@ -104,6 +106,8 @@
           if (cls === "production") {
             entry.module = { macro, efficiency: null, built: attr(s, "state") !== "construction", state: null, shortage: null };
             st.modules.push(entry.module);
+          } else if (cls === "buildprocessor") {
+            st.buildProcessors++;
           } else if (cls === "habitation") {
             st.habitats.push(macro);
           } else if (cls === "storage") {
@@ -143,6 +147,16 @@
           }
         }
         return;
+      }
+
+      // a player ship's standing order says what it does (mining, trading...)
+      if (s.startsWith("<order ") && s.includes('default="1"')) {
+        for (let i = stack.length - 1; i >= 0; i--) {
+          if (stack[i].ship) {
+            if (stack[i].playerShip && !stack[i].playerShip.order) stack[i].playerShip.order = attr(s, "order");
+            break;
+          }
+        }
       }
 
       if (!current) {

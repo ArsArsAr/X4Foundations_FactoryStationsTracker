@@ -93,6 +93,14 @@ const TERMS = {
   forsale: "Units NPC stations are offering for sale right now.",
   onemodule: "What one module adds per hour at local prices: output at the typical NPC buying price, minus inputs at the typical NPC selling price.",
   payback: "Build cost of one module divided by what it adds per hour.",
+  actual: "Credits that really changed hands with NPC stations in the save's trade log, per hour. Trades between your own stations and ships are left out: that money stays in your empire. Stock that piles up or runs down is not counted.",
+  stationactual: "This station's own books from the trade log, per hour: what it sold minus what it bought, at the real prices, including trades with your own ships.",
+  fleettrades: "Trades this ship made in the save's trade log (loading and delivering both count).",
+  hubin: "Units per hour delivered to this hub: by your miners, your traders, or bought from NPCs.",
+  hubout: "Units per hour that left this hub: to your stations or sold to NPCs.",
+  hublasts: "How long the stock lasts if more keeps going out than coming in.",
+  hubprices: "The hub's own buy and sell offer for this ware.",
+  owntraders: "Ships set to trade whose home is this station (the station they traded with most in the log). Ore and gas can only be hauled by mining ships set to trade, so those are counted here too.",
   yourprice: "Your stations' trade offer for this ware, averaged over the stations that trade it.",
 };
 
@@ -168,6 +176,19 @@ function stationValue(st, mode = "avg", modules = st.modules) {
 // money moving between your own pockets, so only the empire's net surplus
 // is sold (at your stations' mean sell price) and only its net shortfall
 // is bought (at their mean buy price).
+// what the trade log says really happened, per hour (null for old empires)
+function actualProfit() {
+  const a = state.empire && state.empire.flows && state.empire.flows.actual;
+  return a ? a.revenue - a.cost : null;
+}
+
+function stationActual(st) {
+  const a = state.empire.flows && state.empire.flows.actual;
+  if (!a) return null;
+  const x = a.stations[st.id];
+  return x ? x.sold - x.bought : 0;
+}
+
 function empireOwnProfit() {
   const e = state.empire;
   if (!e) return 0;
@@ -313,6 +334,20 @@ function attentionIssues() {
         weight: 1e12 * (1 - r.cover), // ahead of single stalls: this is usually their cause
       });
     }
+    for (const p of fleetProblems() || []) {
+      if (p.sev < 2) continue;
+      issues.push({ sev: 2, st: null, kind: "fleet", tab: "logistics", title: `${p.label}: ${p.text}`, sub: p.fix, weight: 1 });
+    }
+    for (const r of minerRebalance()) {
+      issues.push({ sev: 2, st: null, kind: "fleet", tab: "logistics", title: `${r.n} ${plural(r.n, "miner")} on ${W[r.from].label} could move to ${W[r.to].label}`, sub: `${W[r.from].label} is ${fmtPercent(r.fromCover)} covered, ${W[r.to].label} ${fmtPercent(r.toCover)}.`, weight: 1e6 });
+    }
+    if (e.flows.routes) {
+      for (const st of e.stations.filter(isHub)) {
+        for (const a of hubReport(st).advice.filter((x) => x.sev === 3)) {
+          issues.push({ sev: 3, st, kind: "hub", tab: "logistics", title: a.text, sub: a.fix, weight: 1e11 });
+        }
+      }
+    }
     for (const r of internalRows()) {
       if (r.gain < 50e3) continue;
       issues.push({
@@ -327,7 +362,7 @@ function attentionIssues() {
   return issues.sort((a, b) => b.sev - a.sev || b.weight - a.weight);
 }
 
-const ISSUE_ICON = { stalled: "warning", runway: "clock", storage: "warning", workforce: "trend-up", mining: "warning", internal: "trend-up" };
+const ISSUE_ICON = { fleet: "clock", hub: "warning", stalled: "warning", runway: "clock", storage: "warning", workforce: "trend-up", mining: "warning", internal: "trend-up" };
 
 const SEV_LABEL = { 3: "Urgent", 2: "Soon", 1: "Worth a look" };
 
@@ -362,6 +397,14 @@ function attentionGroups() {
       add("workforce", { sev: 1, kind: "workforce" }).items.push(i);
     } else if (i.kind === "internal") {
       add("internal", { sev: 1, kind: "internal", tab: "supply" }).items.push(i);
+    } else if (i.kind === "fleet") {
+      const g = add("fleet", { sev: 2, kind: "fleet", tab: "logistics" });
+      g.items.push(i);
+      g.weight += i.weight;
+    } else if (i.kind === "hub") {
+      const g = add("hub", { sev: 3, kind: "hub", tab: "logistics" });
+      g.items.push(i);
+      g.weight += i.weight;
     }
   }
 
@@ -391,6 +434,13 @@ function attentionGroups() {
       g.title = `${at} short of workers`;
       g.sub = gain > 0 ? `Full staff would add about ${fmtCr(gain)} per hour.` : "Add habitats so the modules get their workforce bonus.";
       g.weight = gain;
+    } else if (g.kind === "fleet") {
+      const n = g.items.length;
+      g.title = `${n} ship ${n === 1 ? "issue" : "issues"}: idle, stuck or on the wrong ware`;
+      g.sub = "Ships you already own that could be moving wares or mining what you are short of.";
+    } else if (g.kind === "hub") {
+      g.title = `${stations === 1 ? "A hub holds" : `${stations} hubs hold`} wares your factories are waiting for`;
+      g.sub = "The wares are mined or bought, they just do not reach the factories. More traders on the hub fix it.";
     } else if (g.kind === "internal") {
       const gain = g.items.reduce((s, i) => s + i.gain, 0);
       g.title = `${g.items.length} ${plural(g.items.length, "ware")} sold to NPCs and bought back`;
@@ -428,7 +478,7 @@ function renderAttention() {
     </span>`;
   const item = (i) => i.st
     ? `<li><button type="button" class="issue-item" data-action="open-station" data-id="${escapeHTML(i.st.id)}"><span class="issue-item-st">${escapeHTML(stationLabel(i.st))}</span><span>${escapeHTML(i.title)}</span></button></li>`
-    : `<li><button type="button" class="issue-item" data-action="open-tab" data-id="supply"><span class="issue-item-st">${escapeHTML(i.title.replace(/^You sell /, "").replace(/ to NPCs and buy it back$/, ""))}</span><span>${escapeHTML(i.sub)}</span></button></li>`;
+    : `<li><button type="button" class="issue-item" data-action="open-tab" data-id="${i.tab || "supply"}"><span class="issue-item-st">${escapeHTML(i.title.replace(/^You sell /, "").replace(/ to NPCs and buy it back$/, ""))}</span><span>${escapeHTML(i.sub)}</span></button></li>`;
   box.innerHTML = `<ul class="issues">${shown.map((g) => {
     if (!g.items.length) {
       return `<li><button type="button" class="issue sev-${g.sev}" data-action="open-tab" data-id="${g.tab}">${head(g)}<span class="issue-go">${icon("arrow-right", 12)}</span></button></li>`;
@@ -436,7 +486,7 @@ function renderAttention() {
     return `<li><details class="issue-group" data-key="${escapeHTML(g.key)}"${open.has(g.key) ? " open" : ""}>
       <summary class="issue sev-${g.sev}">${head(g)}<span class="issue-count num" title="${g.items.length} ${g.items.length === 1 ? "entry" : "entries"}">${g.items.length}</span></summary>
       <ul class="issue-items">${g.items.map(item).join("")}
-        ${g.tab ? `<li><button type="button" class="issue-item is-link" data-action="open-tab" data-id="${g.tab}">Open the Supply tab${icon("arrow-right", 11)}</button></li>` : ""}
+        ${g.tab ? `<li><button type="button" class="issue-item is-link" data-action="open-tab" data-id="${g.tab}">Open the ${g.tab === "logistics" ? "Logistics" : "Supply"} tab${icon("arrow-right", 11)}</button></li>` : ""}
       </ul>
     </details></li>`;
   }).join("")}</ul>
@@ -498,6 +548,7 @@ function renderEmpire() {
   if (tab === "overview") renderOverview();
   else if (tab === "stations") renderStationsTab();
   else if (tab === "supply") renderSupply();
+  else if (tab === "logistics") renderLogistics();
   else if (tab === "prices") {
     renderOpportunities();
     renderPrices();
@@ -516,9 +567,12 @@ function renderOverview() {
   els.rankProfit.textContent = fmtCredits(Math.max(0, profit));
 
   const own = state.empire && state.empire.stations.some((st) => st.offers) ? empireOwnProfit() : null;
+  const actual = actualProfit();
+  const a = actual !== null ? state.empire.flows.actual : null;
   els.rankDay.innerHTML = profit > 0
     ? `About ${fmtCredits(profit * 24)} Cr per in-game day at average prices.` +
-      (own !== null ? `<br>At your own trade prices: <strong class="num">${fmtCredits(own)}</strong> Cr per hour.` : "")
+      (own !== null ? `<br>At your own trade prices: <strong class="num">${fmtCredits(own)}</strong> Cr per hour.` : "") +
+      (a ? `<br><span class="term" title="${escapeHTML(TERMS.actual)}">Actually traded</span> over the last ${Math.round(state.empire.flows.hours)} h: <strong class="num ${actual >= 0 ? "is-ok" : "is-short"}">${actual >= 0 ? "+" : ""}${fmtCredits(actual)}</strong> Cr per hour (sold ${fmtCredits(a.revenue)}, bought ${fmtCredits(a.cost)})${state.empire.stations.some((st) => st.buildsShips) ? `. Ship sales at your wharfs are not in the log, only what they buy` : ""}.` : "")
     : "Track some production modules to start earning a rank.";
 
   if (next) {
@@ -708,6 +762,7 @@ function recordHistory() {
     saveName: e.saveName || "",
     profit: Math.round(empireProfit()),
     ownProfit: Math.round(empireOwnProfit()),
+    actualProfit: actualProfit() === null ? null : Math.round(actualProfit()),
     modules: e.stations.reduce((s, st) => s + moduleTotal(st), 0),
     stations: e.stations.length,
   };
@@ -884,10 +939,11 @@ function renderStationsTab() {
     workforce: (r) => r.st.workforce || 0,
     avg: (r) => r.profit,
     own: (r) => (r.own === null ? -Infinity : r.own),
+    actual: (r) => (r.actual === null ? -Infinity : r.actual),
     issues: (r) => issueCount.get(r.st.id) || 0,
   }[sort.key];
   const rows = e.stations
-    .map((st) => ({ st, profit: stationValue(st), own: hasOwn ? stationValue(st, "own") : null, modules: moduleTotal(st) }))
+    .map((st) => ({ st, profit: stationValue(st), own: hasOwn ? stationValue(st, "own") : null, actual: stationActual(st), modules: moduleTotal(st) }))
     .filter((r) => !q || [stationLabel(r.st), r.st.sectorName, ...r.st.modules.map((m) => W[m.ware].label)].some((t) => t.toLowerCase().includes(q)))
     .sort((a, b) => {
       const x = sortValue(a), y = sortValue(b);
@@ -900,9 +956,9 @@ function renderStationsTab() {
   };
   els.stationsNote.textContent = `${rows.length === e.stations.length ? `${rows.length} ${plural(rows.length, "station")}` : `${rows.length} of ${e.stations.length} stations`}. Click a column to sort, a station to open it, and the plus and minus on a module to plan changes.`;
   els.stationList.innerHTML = `
-    <div class="st-row st-head"><span></span><span>${head("name", "Station")}</span><span>${head("sector", "Sector")}</span><span>${head("modules", term("Modules", "modules"))}</span><span>${head("workforce", term("Workforce", "workforce"))}</span><span>${head("avg", term("Average", "average"))}</span><span>${head("own", term("Own prices", "own"))}</span></div>
+    <div class="st-row st-head"><span></span><span>${head("name", "Station")}</span><span>${head("sector", "Sector")}</span><span>${head("modules", term("Modules", "modules"))}</span><span>${head("workforce", term("Workforce", "workforce"))}</span><span>${head("avg", term("Average", "average"))}</span><span>${head("own", term("Own prices", "own"))}</span><span>${head("actual", term("Actual", "stationactual"))}</span></div>
     ${rows.length ? "" : `<p class="quiet-note st-empty">No station matches "${escapeHTML(state.stationFilter.trim())}".</p>`}
-    ${rows.map(({ st, profit, own, modules }) => {
+    ${rows.map(({ st, profit, own, actual, modules }) => {
       const open = state.openStation === st.id;
       const issues = issueCount.get(st.id) || 0;
       const planned = state.plan[st.id] ? `<span class="tag is-plain">planned</span>` : "";
@@ -918,6 +974,9 @@ function renderStationsTab() {
           <span class="num dim">${wf}</span>
           ${val(profit)}
           ${own === null ? `<span class="num dim">reload</span>` : val(own)}
+          ${actual === null ? `<span class="num dim">reload</span>` : st.buildsShips
+            ? `<span class="num dim term" title="Builds ships. Ship sales are not in the trade log, so this only shows what it spent: ${escapeHTML(fmtCredits(actual))} Cr per hour.">builds ships</span>`
+            : `<span class="num ${actual > 0 ? "is-ok" : actual < 0 ? "is-short" : "dim"}">${actual ? fmtCredits(actual) : "none"}</span>`}
         </button>
         ${open ? stationDetail(st) : ""}
       </div>`;
@@ -994,8 +1053,19 @@ function stationDetail(st) {
         <section><h3>Ships in${st.cargo ? `<span class="flow-head">per hour, stock lasts</span>` : ""}</h3>${flowList(inbound, true)}</section>
         <section><h3>Ships out${st.cargo ? `<span class="flow-head">per hour, in stock</span>` : ""}</h3>${flowList(outbound, false)}</section>
         ${storage}
+        ${routesSection(st)}
       </div>
     </div>`;
+}
+
+function routesSection(st) {
+  if (!state.empire.flows || !state.empire.flows.routes) return "";
+  const r = stationRoutes(st);
+  if (!r.from.length && !r.to.length) return "";
+  const list = (items, verb) => items.length
+    ? items.map((x) => `<div class="hub-flow"><span>${W[x.ware].label} ${verb} ${routeLink(x.id)}</span><span class="num dim">${fmtRate(x.perHour)}/h</span></div>`).join("")
+    : `<p class="quiet-note">Nothing in the log.</p>`;
+  return `<section><h3>Supplied by</h3>${list(r.from, "from")}</section><section><h3>Delivers to</h3>${list(r.to, "to")}</section>`;
 }
 
 function openStation(id) {
@@ -1155,6 +1225,22 @@ function renderPrices() {
    in, what you bought from NPCs and what you sold to them.
 --------------------------------------------------------------------- */
 
+// What a ship does, from its standing order rather than its hull: only
+// mining-hull ships can carry ore and gas, so many of them are set to
+// trade for a station and haul raw materials instead of mining.
+function shipRole(ship) {
+  const order = ship.order || "";
+  if (/Mining/i.test(order)) return "miner";
+  if (/Trade|Middleman|Supply/i.test(order)) return "trader";
+  return ship.macro.includes("_miner_") ? "miner" : "trader";
+}
+
+// a trader on a mining hull hauls raw materials: "solid" or "liquid" (gas)
+function rawHaul(ship) {
+  if (!ship.macro.includes("_miner_") || shipRole(ship) !== "trader") return null;
+  return ship.macro.includes("_liquid_") ? "liquid" : "solid";
+}
+
 // condensed at import: per ware, units and credits per hour
 function summariseFlows(result, converted) {
   const { trades, ships, info, log } = result;
@@ -1162,7 +1248,7 @@ function summariseFlows(result, converted) {
   const stationIds = new Map();
   result.stations.forEach((s, i) => { if (s.id) stationIds.set(s.id, converted[i].id); });
   const shipById = new Map(ships.map((s) => [s.id, s]));
-  const kind = (id) => stationIds.has(id) ? "station" : shipById.has(id) ? (shipById.get(id).macro.includes("_miner_") ? "miner" : "ship") : "npc";
+  const kind = (id) => stationIds.has(id) ? "station" : shipById.has(id) ? (shipRole(shipById.get(id)) === "miner" ? "miner" : "ship") : "npc";
 
   let start = Infinity;
   for (const t of trades) if (t[0] < start) start = t[0];
@@ -1173,10 +1259,30 @@ function summariseFlows(result, converted) {
   const acc = {};
   const byType = {}; // storage type -> { volume, miners } so a miner's time across wares counts once
   const get = (w) => acc[w] || (acc[w] = { mined: 0, miners: new Set(), bought: 0, boughtCr: 0, sold: 0, soldCr: 0 });
+  // real credits: per station (its own books, every trade counts) and for
+  // the empire (only trades with NPCs; moving wares between your own
+  // stations and ships is money changing pockets)
+  const books = {};
+  const book = (id) => books[id] || (books[id] = { sold: 0, bought: 0, soldNpc: 0, boughtNpc: 0 });
+  let npcRevenue = 0, npcCost = 0;
   for (const [, ware, buyer, seller, price, v] of trades) {
-    if (!W[ware] || !v) continue;
+    if (!v) continue;
     const b = kind(buyer);
     const s = kind(seller);
+    const cr = v * price;
+    if (s === "station") {
+      const x = book(stationIds.get(seller));
+      x.sold += cr;
+      if (b === "npc") x.soldNpc += cr;
+    }
+    if (b === "station") {
+      const x = book(stationIds.get(buyer));
+      x.bought += cr;
+      if (s === "npc") x.boughtNpc += cr;
+    }
+    if (b === "npc" && s !== "npc") npcRevenue += cr;
+    else if (s === "npc" && b !== "npc") npcCost += cr;
+    if (!W[ware]) continue;
     const f = get(ware);
     if (s === "miner" && b !== "npc") {
       f.mined += v;
@@ -1205,15 +1311,20 @@ function summariseFlows(result, converted) {
       sellPrice: f.sold ? f.soldCr / f.sold : null,
     };
   }
-  const minerCount = { solid: 0, liquid: 0 };
+  const minerCount = { solid: 0, liquid: 0, haulSolid: 0, haulLiquid: 0 };
   for (const s of ships) {
     if (!s.macro.includes("_miner_")) continue;
-    if (s.macro.includes("_liquid_")) minerCount.liquid++;
-    else minerCount.solid++;
+    const liquid = s.macro.includes("_liquid_");
+    if (shipRole(s) === "miner") minerCount[liquid ? "liquid" : "solid"]++;
+    else minerCount[liquid ? "haulLiquid" : "haulSolid"]++;
   }
   const perMiner = {}; // storage type -> volume one miner brings in per hour
   for (const [t, x] of Object.entries(byType)) perMiner[t] = x.volume / hours / x.miners.size;
-  return { hours, wares, minerCount, perMiner };
+  const actual = { revenue: npcRevenue / hours, cost: npcCost / hours, stations: {} };
+  for (const [id, x] of Object.entries(books)) {
+    actual.stations[id] = { sold: x.sold / hours, bought: x.bought / hours, soldNpc: x.soldNpc / hours, boughtNpc: x.boughtNpc / hours };
+  }
+  return { hours, wares, minerCount, perMiner, actual, ...summariseRoutes(result, converted, hours, end) };
 }
 
 // empire-wide units per hour your stations use (modules at full speed, plus workers)
@@ -1313,7 +1424,8 @@ function renderSupply() {
   }
   const f = e.flows;
   note.innerHTML = `From the trade log in your save: the last <strong class="num">${Math.round(f.hours)}</strong> game hours.
-    "Needed" is what your stations use with every module running, plus what their workers eat. You own ${f.minerCount.solid} solid and ${f.minerCount.liquid} gas ${plural(f.minerCount.liquid, "miner")}; most switch between wares.
+    "Needed" is what your stations use with every module running, plus what their workers eat. You have ${f.minerCount.solid} solid and ${f.minerCount.liquid} gas ${plural(f.minerCount.liquid, "miner")} mining${f.minerCount.haulSolid || f.minerCount.haulLiquid ? `, plus ${f.minerCount.haulSolid + f.minerCount.haulLiquid} mining ships set to trade, which haul ore and gas between stations and are not counted as mining` : ""}.
+    Miners switch between wares.
     Extra miners are counted at what one of yours brings in per hour when it mines only that ware.`;
 
   const rows = miningRows();
@@ -1414,6 +1526,539 @@ function renderOpportunities() {
           <span><span class="num">${r.payback ? fmtHours(r.payback) : "?"}</span><span class="price-sub">${fmtCredits(r.cost)} Cr</span></span>
         </div>`).join("")}`
     : `<p class="quiet-note">No ware is short in your universe right now. NPC supply covers every buy order.</p>`;
+}
+
+/* ---------------------------------------------------------------------
+   Logistics: distribution hubs and the routes between your stations.
+
+   X4 has no special hub module: a distribution centre is a station with
+   storage and little or no production, run through buy and sell offers
+   and the ships that work for it. The save's trade log names the ship in
+   every trade, so following each of your ships from where it loaded a
+   ware to where it delivered it gives the real routes.
+--------------------------------------------------------------------- */
+
+const HUBS_KEY = "x4-factories-planner:hubs";
+let hubOverrides = {}; // stationID -> true (track) | false (never)
+
+// condensed at import from the raw trade log
+function shipType(macro) {
+  if (macro.includes("_miner_liquid")) return "Gas miner";
+  if (macro.includes("_miner_")) return "Solid miner";
+  if (macro.includes("_trans_")) return "Freighter";
+  if (macro.includes("_builder_")) return "Builder";
+  if (/_(scout|fighter|heavyfighter|bomber|corvette|frigate|gunboat|destroyer|carrier|battleship|resupplier)_/.test(macro)) return "Combat";
+  return "Other";
+}
+
+function summariseRoutes(result, converted, hours, end) {
+  const stationIds = new Map();
+  result.stations.forEach((s, i) => { if (s.id) stationIds.set(s.id, converted[i].id); });
+  const shipById = new Map(result.ships.map((s) => [s.id, s]));
+  const node = (id) => stationIds.get(id) || "npc";
+  const acc = new Map();
+  const shipsAt = new Map();
+  const loads = new Map();
+  const addRoute = (from, to, ware, units, ship) => {
+    if (from === to) return; // npc to npc, or a load that went back where it came from
+    const k = `${from}|${to}|${ware}`;
+    const r = acc.get(k) || { from, to, ware, units: 0, ships: new Set() };
+    r.units += units;
+    if (ship) r.ships.add(ship);
+    acc.set(k, r);
+  };
+  const tradeCount = new Map(); // ship -> station -> trades, to find each ship's home
+  const workedFor = (stationId, shipId) => {
+    if (!stationId) return;
+    if (!shipsAt.has(stationId)) shipsAt.set(stationId, new Set());
+    shipsAt.get(stationId).add(shipId);
+    if (!tradeCount.has(shipId)) tradeCount.set(shipId, new Map());
+    const c = tradeCount.get(shipId);
+    c.set(stationId, (c.get(stationId) || 0) + 1);
+  };
+
+  const sorted = [...result.trades].sort((a, b) => a[0] - b[0]);
+  for (const [, ware, buyer, seller, , v] of sorted) {
+    if (!W[ware] || !v) continue;
+    const bShip = shipById.get(buyer);
+    const sShip = shipById.get(seller);
+    if (bShip && sShip) continue;
+    if (bShip) {
+      // a ship loads: remember where this cargo came from
+      workedFor(stationIds.get(seller), buyer);
+      if (!loads.has(buyer)) loads.set(buyer, new Map());
+      const q = loads.get(buyer);
+      if (!q.has(ware)) q.set(ware, []);
+      q.get(ware).push({ from: node(seller), units: v });
+    } else if (sShip) {
+      // a ship delivers: match it to the loads it is carrying, oldest first
+      workedFor(stationIds.get(buyer), seller);
+      const to = node(buyer);
+      const q = (loads.get(seller) || new Map()).get(ware) || [];
+      let left = v;
+      while (left > 0 && q.length) {
+        const n = Math.min(q[0].units, left);
+        addRoute(q[0].from, to, ware, n, seller);
+        q[0].units -= n;
+        left -= n;
+        if (!q[0].units) q.shift();
+      }
+      if (left > 0) addRoute(shipRole(sShip) === "miner" ? "mined" : "unknown", to, ware, left, seller);
+    } else {
+      addRoute(node(seller), node(buyer), ware, v, null);
+    }
+  }
+
+  const routes = [...acc.values()]
+    .map((r) => ({ from: r.from, to: r.to, ware: r.ware, perHour: r.units / hours, ships: r.ships.size }))
+    .filter((r) => r.perHour >= 1);
+  const ships = {};
+  for (const [stationId, set] of shipsAt) {
+    const c = { miners: 0, traders: 0, haulSolid: 0, haulLiquid: 0 };
+    for (const id of set) countShip(c, shipById.get(id));
+    ships[stationId] = c;
+  }
+  // a ship's home: the station it traded with most (X4 keeps assignments
+  // in script state, so this is read from behaviour instead)
+  const homes = {};
+  const homeOf = new Map();
+  for (const [shipId, counts] of tradeCount) {
+    const home = [...counts].sort((a, b) => b[1] - a[1])[0][0];
+    homeOf.set(shipId, home);
+    countShip(homes[home] || (homes[home] = { miners: 0, traders: 0, haulSolid: 0, haulLiquid: 0 }), shipById.get(shipId));
+  }
+  // every transport and mining ship: what it was told to do and what it did
+  const activity = new Map(); // ship -> { trades, last, mined: Map(ware -> units) }
+  for (const [time, ware, buyer, seller, , v] of sorted) {
+    for (const id of [buyer, seller]) {
+      if (!shipById.has(id)) continue;
+      const a = activity.get(id) || { trades: 0, last: 0, mined: new Map() };
+      a.trades++;
+      a.last = Math.max(a.last, time);
+      activity.set(id, a);
+    }
+    const s = shipById.get(seller);
+    if (s && shipRole(s) === "miner" && W[ware] && W[ware].isMined) {
+      const a = activity.get(seller);
+      a.mined.set(ware, (a.mined.get(ware) || 0) + v);
+    }
+  }
+  const fleet = result.ships
+    .filter((s) => ["Solid miner", "Gas miner", "Freighter", "Other"].includes(shipType(s.macro)))
+    .map((s) => {
+      const a = activity.get(s.id) || { trades: 0, last: 0, mined: new Map() };
+      const top = [...a.mined].sort((x, y) => y[1] - x[1])[0];
+      return {
+        code: s.code, name: s.name, type: shipType(s.macro), size: (s.macro.split("_")[2] || "").toUpperCase(),
+        order: s.order || null, role: shipRole(s), raw: rawHaul(s),
+        trades: a.trades, idle: a.last ? (end - a.last) / 3600 : null,
+        home: homeOf.get(s.id) || null, mines: top ? top[0] : null,
+      };
+    });
+  return { routes, ships, homes, fleet };
+}
+
+function countShip(c, ship) {
+  if (shipRole(ship) === "miner") c.miners++;
+  else c.traders++;
+  const raw = rawHaul(ship);
+  if (raw === "solid") c.haulSolid++;
+  else if (raw === "liquid") c.haulLiquid++;
+}
+
+function haulText(c) {
+  const parts = [];
+  if (c.haulSolid) parts.push(`${c.haulSolid} solid`);
+  if (c.haulLiquid) parts.push(`${c.haulLiquid} gas`);
+  return parts.length ? `${parts.join(" and ")} on mining hulls` : "";
+}
+
+function routeName(id) {
+  if (id === "npc") return "NPC stations";
+  if (id === "mined") return "your miners";
+  if (id === "unknown") return "earlier loads";
+  const st = stationById(id);
+  return st ? stationLabel(st) : "a station you no longer own";
+}
+
+function routeLink(id) {
+  return stationById(id)
+    ? `<button type="button" class="link-btn" data-action="open-station" data-id="${escapeHTML(id)}">${escapeHTML(routeName(id))}</button>`
+    : escapeHTML(routeName(id));
+}
+
+function isHub(st) {
+  if (st.id in hubOverrides) return hubOverrides[st.id];
+  if (st.modules.length) return false;
+  const routes = (state.empire.flows && state.empire.flows.routes) || [];
+  if (!routes.some((r) => r.from === st.id || r.to === st.id)) return false;
+  // a hub by name, or a real storage station (a dock with a module or two is not)
+  return /distro|distribut|hub|depot|warehouse|logistic|storage|stock/i.test(st.name || "") || (st.storage || []).length >= 3;
+}
+
+function setHub(id, on) {
+  const st = stationById(id);
+  if (!st) return;
+  delete hubOverrides[id];
+  if (isHub(st) !== on) hubOverrides[id] = on;
+  writeJSON(HUBS_KEY, hubOverrides);
+  refresh();
+}
+
+// wares stalled somewhere in the empire: ware -> { modules, stations: Set }
+function stalledWares() {
+  const out = new Map();
+  for (const st of state.empire.stations) {
+    for (const m of st.modules) {
+      if (!m.stalled) continue;
+      for (const w of m.short || []) {
+        const x = out.get(w) || { modules: 0, stations: new Set() };
+        x.modules += m.stalled;
+        x.stations.add(st);
+        out.set(w, x);
+      }
+    }
+  }
+  return out;
+}
+
+// who can carry a ware: ore, silicon and ice need solid mining hulls,
+// gases need gas mining hulls, everything else goes in freighters
+function haulFix(r, home) {
+  const w = W[r.ware];
+  let have, kind;
+  if (w.isMined && w.storageType === "Solid") { have = home.haulSolid; kind = "solid mining ships set to trade"; }
+  else if (w.isMined) { have = home.haulLiquid; kind = "gas mining ships set to trade"; }
+  else { have = home.traders - home.haulSolid - home.haulLiquid; kind = "freighters"; }
+  if (r.out <= 0) return `Nothing leaves this hub yet. Give it a sell offer and assign ${kind} to it, or let those stations buy from it.`;
+  const crew = have ? `${have} ${kind} haul from this hub` : `No ${kind} of its own haul from this hub`;
+  if (r.inn > r.out * 1.05) return `${crew}, and more arrives than leaves. Assign more ${kind} to the hub.`;
+  const cover = w.isMined && state.empire.flows ? (miningRows().find((m) => m.ware === r.ware) || {}).cover : null;
+  return `${crew} and they keep up with what arrives, so this stock is a buffer. Extra ${kind} would draw it down for a while; the lasting fix is more ${w.isMined ? `miners${cover != null && cover < 1 ? ` (mining covers ${fmtPercent(cover)} of what you use)` : ""}` : "production"}.`;
+}
+
+function hubReport(st) {
+  const routes = state.empire.flows.routes;
+  const inbound = routes.filter((r) => r.to === st.id);
+  const outbound = routes.filter((r) => r.from === st.id);
+  const wares = new Set([...Object.keys(st.cargo || {}), ...Object.keys(st.offers || {}), ...inbound.map((r) => r.ware), ...outbound.map((r) => r.ware)]);
+  const stalled = stalledWares();
+  const fills = Object.fromEntries(storageFill(st).map((s) => [s.type, s]));
+
+  const rows = [...wares].filter((w) => W[w]).map((w) => {
+    const inn = inbound.filter((r) => r.ware === w).reduce((s, r) => s + r.perHour, 0);
+    const out = outbound.filter((r) => r.ware === w).reduce((s, r) => s + r.perHour, 0);
+    const offer = (st.offers || {})[w] || {};
+    return {
+      ware: w, inn, out, net: inn - out, stock: (st.cargo || {})[w] || 0,
+      buy: offer.buy ? offer.buy.price : null, sell: offer.sell ? offer.sell.price : null,
+      type: W[w].storageType.toLowerCase(),
+    };
+  }).sort((a, b) => (b.inn + b.out) - (a.inn + a.out) || b.stock - a.stock);
+
+  // per storage type: how fast it fills or empties
+  const typeNet = {};
+  for (const r of rows) typeNet[r.type] = (typeNet[r.type] || 0) + r.net * W[r.ware].volume;
+  const typeInfo = Object.entries(st.storageCap || {}).map(([type, cap]) => {
+    const used = fills[type] ? fills[type].used : 0;
+    const net = typeNet[type] || 0;
+    return { type, cap, used, fill: used / cap, net, hoursToFull: net > 0 ? (cap - used) / net : null };
+  }).filter((t) => t.cap > 0);
+
+  const advice = [];
+  const home = (state.empire.flows.homes || {})[st.id] || { traders: 0, haulSolid: 0, haulLiquid: 0 };
+  for (const r of rows) {
+    const s = stalled.get(r.ware);
+    if (s && r.stock > 0) {
+      advice.push({
+        sev: 3,
+        text: `Holds ${Math.round(r.stock).toLocaleString("en-US")} ${W[r.ware].label} while ${s.modules} ${plural(s.modules, "module")} wait for it at ${stationNames([...s.stations])}.`,
+        fix: haulFix(r, home),
+      });
+    }
+  }
+  for (const t of typeInfo) {
+    const label = t.type.charAt(0).toUpperCase() + t.type.slice(1);
+    if (t.fill >= STORAGE_WARN) {
+      advice.push({ sev: 2, text: `${label} storage is ${fmtPercent(Math.min(1, t.fill))} full.`, fix: "Deliveries stop when it is full. Ship more out, open sell offers to NPCs, or add storage." });
+    } else if (t.hoursToFull !== null && t.hoursToFull < 12) {
+      advice.push({ sev: 2, text: `${label} storage fills up in about ${fmtHours(t.hoursToFull)} at the current pace.`, fix: "More comes in than goes out. Assign traders out, or cap the buy offer." });
+    }
+  }
+  const unsold = rows.filter((r) => r.stock > 0 && r.out < 1 && !r.sell).sort((a, b) => b.stock * W[b.ware].price.avg - a.stock * W[a.ware].price.avg);
+  if (unsold.length) {
+    const value = unsold.reduce((s, r) => s + r.stock * W[r.ware].price.avg, 0);
+    advice.push({
+      sev: 2,
+      text: unsold.length === 1
+        ? `${Math.round(unsold[0].stock).toLocaleString("en-US")} ${W[unsold[0].ware].label} in stock and no sell offer, so nothing can take it.`
+        : `${unsold.length} wares sit here with no sell offer, worth about ${fmtCr(value)}: ${unsold.slice(0, 4).map((r) => W[r.ware].label).join(", ")}${unsold.length > 4 ? " and more" : ""}.`,
+      fix: "Add sell offers (your faction only, if they are meant for your stations) so traders can take them out.",
+    });
+  }
+  for (const r of rows) {
+    if (r.stock > 0 && r.out < 1 && !r.sell) {
+      continue;
+    } else if (r.net < 0 && r.stock > 0 && r.stock / -r.net < RUNWAY_WARN_HOURS && !stalled.has(r.ware)) {
+      advice.push({ sev: 1, text: `${W[r.ware].label} runs out here in about ${fmtHours(r.stock / -r.net)}.`, fix: "More goes out than comes in. Add miners or traders bringing it in, or raise the buy price." });
+    }
+  }
+  if (!st.storageCap || !Object.keys(st.storageCap).length) {
+    advice.push({ sev: 2, text: "This station has no storage modules.", fix: "A hub needs storage for every kind of ware it handles: container, solid, liquid." });
+  }
+  for (const r of rows) {
+    if ((r.buy || r.sell) && !(st.storageCap || {})[r.type]) {
+      advice.push({ sev: 2, text: `Trades ${W[r.ware].label} but has no ${r.type} storage.`, fix: `Add a ${r.type} storage module, or drop the offer.` });
+    }
+  }
+  advice.sort((a, b) => b.sev - a.sev);
+
+  const top = (list, key) => {
+    const m = new Map();
+    for (const r of list) m.set(r[key], (m.get(r[key]) || 0) + r.perHour * W[r.ware].price.avg);
+    return [...m].sort((a, b) => b[1] - a[1]);
+  };
+  return {
+    rows, typeInfo, advice,
+    sources: top(inbound, "from"), destinations: top(outbound, "to"),
+    ships: (state.empire.flows.ships || {})[st.id] || { miners: 0, traders: 0 },
+    home: (state.empire.flows.homes || {})[st.id] || { miners: 0, traders: 0, haulSolid: 0, haulLiquid: 0 },
+  };
+}
+
+function renderLogistics() {
+  const note = $("logistics-note");
+  const box = $("hub-list");
+  const routesBox = $("route-list");
+  const e = state.empire;
+  if (!e || !e.flows || !e.flows.routes) {
+    note.textContent = "";
+    box.innerHTML = `<p class="quiet-note">${e ? "Load your save again to see logistics. This empire was read by an older version that did not trace routes." : "Load a save to see your distribution hubs and what moves between your stations."}</p>`;
+    routesBox.innerHTML = "";
+    return;
+  }
+  const traffic = (st) => e.flows.routes.filter((r) => r.from === st.id || r.to === st.id).reduce((s, r) => s + r.perHour * W[r.ware].price.avg, 0);
+  const hubs = e.stations.filter(isHub).sort((a, b) => traffic(b) - traffic(a));
+  note.innerHTML = `A distribution hub is a station that stores and passes on wares rather than making them. Routes come from following each of your ships in the trade log, from where it loaded to where it delivered, over the last <strong class="num">${Math.round(e.flows.hours)}</strong> game hours.`;
+
+  const others = e.stations.filter((st) => !isHub(st)).sort((a, b) => stationLabel(a).localeCompare(stationLabel(b)));
+  const picker = `<label class="select-field hub-add"><span>Track a station as a hub</span>
+    <select data-action="hub-add"><option value="">Choose a station</option>${others.map((st) => `<option value="${escapeHTML(st.id)}">${escapeHTML(stationLabel(st))}</option>`).join("")}</select></label>`;
+
+  renderTransport(hubs);
+  renderFleet();
+  box.innerHTML = (hubs.length ? hubs.map((st) => hubCard(st)).join("") : `<p class="quiet-note">No hubs found. A station with storage, no production and traffic in the trade log counts as one; you can also pick any station below.</p>`) + picker;
+
+  const flows = e.flows.routes
+    .filter((r) => stationById(r.from) && stationById(r.to))
+    .sort((a, b) => b.perHour * W[b.ware].price.avg - a.perHour * W[a.ware].price.avg);
+  const shown = state.routesAll ? flows : flows.slice(0, 20);
+  routesBox.innerHTML = flows.length
+    ? `<div class="route-row route-head"><span>From</span><span>To</span><span>Ware</span><span>Per hour</span><span>Ships</span></div>
+      ${shown.map((r) => `<div class="route-row">
+        <span>${routeLink(r.from)}</span>
+        <span>${routeLink(r.to)}</span>
+        <button type="button" class="net-name" data-action="inspect" data-id="${r.ware}">${W[r.ware].label}</button>
+        <span class="num">${fmtRate(r.perHour)}</span>
+        <span class="num dim">${r.ships || ""}</span>
+      </div>`).join("")}
+      ${flows.length > 20 ? `<button type="button" class="btn is-small is-ghost" data-action="toggle-routes">${state.routesAll ? "Show fewer" : `Show all ${flows.length}`}</button>` : ""}`
+    : `<p class="quiet-note">No deliveries between your own stations in the trade log.</p>`;
+}
+
+function hubCard(st) {
+  const h = hubReport(st);
+  const SEV = { 3: "is-short", 2: "is-warn", 1: "is-plain" };
+  const fmtFill = (t) => {
+    const label = t.type.charAt(0).toUpperCase() + t.type.slice(1);
+    const trend = t.net > 1 ? `filling${t.hoursToFull !== null ? `, full in ${fmtHours(t.hoursToFull)}` : ""}` : t.net < -1 ? "emptying" : "steady";
+    return `<div class="fill-row"><span>${label}</span>
+      <span class="rank-bar${t.fill >= STORAGE_WARN ? " is-full" : ""}"><span style="transform:scaleX(${Math.min(1, t.fill)})"></span></span>
+      <span class="num dim">${fmtPercent(Math.min(1, t.fill))}</span><span class="fill-trend">${trend}</span></div>`;
+  };
+  const flowList = (list) => list.length
+    ? list.slice(0, 6).map(([id, v]) => `<div class="hub-flow"><span>${routeLink(id)}</span><span class="num dim">${fmtCredits(v)} Cr/h</span></div>`).join("")
+    : `<p class="quiet-note">Nothing in the log.</p>`;
+
+  return `<section class="hub-card">
+    <div class="hub-head">
+      <div>
+        <h3><button type="button" class="link-btn hub-name" data-action="open-station" data-id="${escapeHTML(st.id)}">${escapeHTML(stationLabel(st))}</button></h3>
+        <p class="quiet-note">${escapeHTML(st.sectorName)}. Its own ships: ${h.home.traders} ${plural(h.home.traders, "trader")}${haulText(h.home) ? ` (${haulText(h.home)})` : ""} and ${h.home.miners} ${plural(h.home.miners, "miner")}. In the log ${h.ships.miners + h.ships.traders} ships traded with it${st.modules.length ? `; it also has ${moduleTotal(st)} production ${plural(moduleTotal(st), "module")}` : ""}.</p>
+      </div>
+      <button type="button" class="btn is-small is-ghost" data-action="hub-remove" data-id="${escapeHTML(st.id)}">Stop tracking</button>
+    </div>
+    ${h.advice.length ? `<ul class="hub-advice">${h.advice.map((a) => `<li class="sev-${a.sev}"><span class="tag ${SEV[a.sev]}">${SEV_LABEL[a.sev]}</span><span><strong>${escapeHTML(a.text)}</strong> ${escapeHTML(a.fix)}</span></li>`).join("")}</ul>`
+      : `<p class="quiet-note all-good">${icon("check", 13)}Running smoothly: nothing piling up, nothing your factories wait for.</p>`}
+    <div class="hub-body">
+      <div class="hub-wares">
+        <div class="hw-row hw-head"><span>Ware</span><span>${term("In", "hubin")}</span><span>${term("Out", "hubout")}</span><span>Stock</span><span>${term("Lasts", "hublasts")}</span><span>${term("Buy / sell", "hubprices")}</span></div>
+        ${h.rows.map((r) => {
+          let lasts = "";
+          if (r.net < -1 && r.stock > 0) lasts = `<span class="num ${r.stock / -r.net < RUNWAY_WARN_HOURS ? "is-short" : ""}">${fmtHours(r.stock / -r.net)}</span>`;
+          else if (r.net < -1) lasts = `<span class="num is-short">empty</span>`;
+          else if (r.net > 1) lasts = `<span class="num dim">growing</span>`;
+          else lasts = `<span class="num dim">${r.stock ? "steady" : ""}</span>`;
+          return `<div class="hw-row">
+            <button type="button" class="net-name" data-action="inspect" data-id="${r.ware}">${W[r.ware].label}</button>
+            <span class="num ${r.inn ? "" : "dim"}">${fmtRate(r.inn)}</span>
+            <span class="num ${r.out ? "" : "dim"}">${fmtRate(r.out)}</span>
+            <span class="num">${Math.round(r.stock).toLocaleString("en-US")}</span>
+            ${lasts}
+            <span class="num dim">${r.buy ? fmtPrice(Math.round(r.buy)) : "-"} / ${r.sell ? fmtPrice(Math.round(r.sell)) : "-"}</span>
+          </div>`;
+        }).join("")}
+      </div>
+      <div class="hub-side">
+        ${h.typeInfo.length ? `<section><h4>Storage</h4>${h.typeInfo.map(fmtFill).join("")}</section>` : ""}
+        <section><h4>Gets wares from</h4>${flowList(h.sources)}</section>
+        <section><h4>Delivers to</h4>${flowList(h.destinations)}</section>
+      </div>
+    </div>
+  </section>`;
+}
+
+// Which stations still run their own transporters although a hub already
+// moves their wares: candidates for handing transport over to the hub.
+function transportRows(hubs) {
+  const homes = state.empire.flows.homes || {};
+  const routes = state.empire.flows.routes;
+  const hubIds = new Set(hubs.map((h) => h.id));
+  return state.empire.stations
+    .map((st) => {
+      const own = homes[st.id] || { miners: 0, traders: 0 };
+      const viaHub = routes.filter((r) => r.from !== r.to && ((hubIds.has(r.from) && r.from !== st.id && r.to === st.id) || (hubIds.has(r.to) && r.to !== st.id && r.from === st.id)));
+      const hubNames = [...new Set(viaHub.map((r) => (hubIds.has(r.from) ? r.from : r.to)))];
+      return { st, traders: own.traders, miners: own.miners, haulSolid: own.haulSolid || 0, haulLiquid: own.haulLiquid || 0, hub: hubIds.has(st.id), hubNames, hubWares: new Set(viaHub.map((r) => r.ware)).size };
+    })
+    .filter((r) => r.traders || r.miners || r.hubNames.length)
+    .sort((a, b) => b.hub - a.hub || b.traders - a.traders);
+}
+
+function renderTransport(hubs) {
+  const box = $("transport-list");
+  const rows = transportRows(hubs);
+  if (!rows.length) {
+    box.innerHTML = `<p class="quiet-note">No ships of yours traded in the log.</p>`;
+    return;
+  }
+  const hubTraders = rows.filter((r) => r.hub).reduce((s, r) => s + r.traders, 0);
+  const ownTraders = rows.filter((r) => !r.hub).reduce((s, r) => s + r.traders, 0);
+  const handover = rows.filter((r) => !r.hub && r.traders && r.hubNames.length);
+  box.innerHTML = `
+    <p class="quiet-note sup-intro">${hubTraders} ${plural(hubTraders, "trader")} work from your hubs and ${ownTraders} from individual stations. A ship's home is the station it traded with most in the log.${handover.length ? ` ${handover.length} ${plural(handover.length, "station")} still run their own traders although a hub already moves some of their wares.` : ""}</p>
+    <div class="tr-row tr-head"><span>Station</span><span>${term("Own traders", "owntraders")}</span><span>Own miners</span><span>Served by a hub</span><span>What to do</span></div>
+    ${rows.map((r) => {
+      let advice = "";
+      if (r.hub) advice = "";
+      else if (r.traders && r.hubNames.length) advice = `Could hand its ${r.traders} ${plural(r.traders, "trader")} to ${r.hubNames.map((id) => escapeHTML(routeName(id))).join(" or ")} and let the hub handle its wares.`;
+      else if (r.traders >= 3 && hubs.length) advice = "Runs its own transport. Route it through a hub to share traders.";
+      else if (!r.traders && r.hubNames.length) advice = "Served by a hub.";
+      return `<div class="tr-row${r.hub ? " is-hub" : ""}">
+        <span>${routeLink(r.st.id)}${r.hub ? ` <span class="tag is-plain">hub</span>` : ""}</span>
+        <span><span class="num ${r.traders ? "" : "dim"}">${r.traders}</span>${haulText(r) ? `<span class="price-sub">${haulText(r)}</span>` : ""}</span>
+        <span class="num ${r.miners ? "" : "dim"}">${r.miners}</span>
+        <span class="tr-hub">${r.hubNames.length ? `${r.hubNames.map((id) => escapeHTML(routeName(id))).join(", ")}<span class="price-sub">${r.hubWares} ${plural(r.hubWares, "ware")}</span>` : `<span class="dim">no</span>`}</span>
+        <span class="sup-advice">${advice}</span>
+      </div>`;
+    }).join("")}`;
+}
+
+// Ships that are not pulling their weight, and what to do about each.
+const ECONOMIC_ORDERS = /Trade|Mining|Middleman|Supply|Salvage/i;
+
+function fleetProblems() {
+  const f = state.empire.flows;
+  if (!f || !f.fleet) return null;
+  const hours = Math.round(f.hours);
+  const out = [];
+  for (const s of f.fleet) {
+    const label = s.name || s.code;
+    if (!s.order || /^(Wait|DockAndWait|MoveWait|Follow)$/.test(s.order)) {
+      const fix = s.type === "Freighter" ? "Assign it to a hub or factory as a trader, or give it a trade order."
+        : s.type === "Other" ? "Give it a job, or sell it."
+        : "Assign it to a station as a miner, or to a hub as a raw hauler (mining ships set to trade carry ore and gas).";
+      out.push({ s, label, sev: 2, kind: "idle", text: `Standing order is ${s.order ? `"${s.order}"` : "empty"}.`, fix });
+    } else if (ECONOMIC_ORDERS.test(s.order) && s.trades === 0) {
+      out.push({ s, label, sev: 2, kind: "stuck", text: `On ${s.order} but made no trades in the last ${hours} h.`, fix: "It may be stuck, blocked by trade rules or a blacklist, or have nothing it is allowed to carry. Check its behaviour in game." });
+    } else if (ECONOMIC_ORDERS.test(s.order) && s.idle !== null && s.idle > 8) {
+      out.push({ s, label, sev: 1, kind: "slow", text: `Last trade ${fmtHours(s.idle)} ago.`, fix: "Check whether it is stuck or waiting for wares it cannot get." });
+    }
+  }
+  return out.sort((a, b) => b.sev - a.sev || (b.s.idle || 1e9) - (a.s.idle || 1e9));
+}
+
+// miners working a ware that is well covered while another of the same
+// kind runs short: moving some over closes the gap without buying ships
+function minerRebalance() {
+  const f = state.empire.flows;
+  if (!f || !f.fleet) return [];
+  const rows = miningRows();
+  const cover = new Map(rows.map((r) => [r.ware, r]));
+  const out = [];
+  for (const type of ["Solid", "Liquid"]) {
+    const wares = rows.filter((r) => W[r.ware].storageType === type && r.need > 0);
+    if (!wares.length) continue;
+    const worst = wares.reduce((a, b) => (a.cover <= b.cover ? a : b));
+    if (worst.cover >= 0.8) continue;
+    const byWare = new Map();
+    for (const s of f.fleet) {
+      if (s.role !== "miner" || !s.mines || W[s.mines].storageType !== type || s.mines === worst.ware) continue;
+      const c = cover.get(s.mines);
+      if (!c || c.cover < 0.9) continue; // moving miners off a short ware only moves the shortage
+      byWare.set(s.mines, (byWare.get(s.mines) || 0) + 1);
+    }
+    for (const [ware, n] of byWare) {
+      const c = cover.get(ware);
+      out.push({ from: ware, to: worst.ware, n, fromCover: c.cover, toCover: worst.cover });
+    }
+  }
+  return out.sort((a, b) => b.n - a.n);
+}
+
+function renderFleet() {
+  const box = $("fleet-list");
+  const problems = fleetProblems();
+  if (!problems) {
+    box.innerHTML = `<p class="quiet-note">Load your save again to check your ships. This empire was read by an older version.</p>`;
+    return;
+  }
+  const f = state.empire.flows;
+  const count = (t) => f.fleet.filter((s) => s.type === t).length;
+  const rebalance = minerRebalance();
+  const head = `<p class="quiet-note sup-intro">${count("Freighter")} freighters, ${count("Solid miner")} solid and ${count("Gas miner")} gas mining ships. Each one's standing order is checked against what it did in the trade log.</p>`;
+  const reb = rebalance.length
+    ? `<ul class="hub-advice">${rebalance.map((r) => `<li class="sev-2"><span class="tag is-warn">Rebalance</span><span><strong>${r.n} ${plural(r.n, "miner")} mostly mine ${W[r.from].label} (${fmtPercent(r.fromCover)} covered) while ${W[r.to].label} is at ${fmtPercent(r.toCover)}.</strong> Moving some of them to ${W[r.to].label} closes part of the gap without buying ships.</span></li>`).join("")}</ul>`
+    : "";
+  if (!problems.length) {
+    box.innerHTML = head + reb + `<p class="quiet-note all-good">${icon("check", 13)}Every transport and mining ship is working.</p>`;
+    return;
+  }
+  const shown = state.fleetAll ? problems : problems.slice(0, 15);
+  box.innerHTML = head + reb + `
+    <div class="fl-row fl-head"><span>Ship</span><span>Order</span><span>Home</span><span>${term("Trades", "fleettrades")}</span><span>Problem</span></div>
+    ${shown.map((p) => `<div class="fl-row">
+      <span class="fl-ship"><span class="fl-name">${escapeHTML(p.label)}</span><span class="price-sub">${p.s.size ? p.s.size + " " : ""}${p.s.type}${p.s.raw ? ", hauls raw" : ""}</span></span>
+      <span class="fl-order">${escapeHTML(p.s.order || "none")}</span>
+      <span>${p.s.home ? routeLink(p.s.home) : `<span class="dim">none</span>`}</span>
+      <span class="num ${p.s.trades ? "" : "dim"}">${p.s.trades}</span>
+      <span class="sup-advice"><span class="tag ${p.sev === 2 ? "is-warn" : "is-plain"}">${p.kind}</span><strong>${escapeHTML(p.text)}</strong> ${escapeHTML(p.fix)}</span>
+    </div>`).join("")}
+    ${problems.length > 15 ? `<button type="button" class="btn is-small is-ghost" data-action="toggle-fleet">${state.fleetAll ? "Show fewer" : `Show all ${problems.length}`}</button>` : ""}`;
+}
+
+// for the Stations tab: who supplies a station and who it supplies
+function stationRoutes(st) {
+  const routes = (state.empire.flows && state.empire.flows.routes) || [];
+  const group = (list, key) => {
+    const m = new Map();
+    for (const r of list) {
+      const k = `${r[key]}|${r.ware}`;
+      m.set(k, { id: r[key], ware: r.ware, perHour: (m.has(k) ? m.get(k).perHour : 0) + r.perHour });
+    }
+    return [...m.values()].sort((a, b) => b.perHour * W[b.ware].price.avg - a.perHour * W[a.ware].price.avg).slice(0, 5);
+  };
+  return { from: group(routes.filter((r) => r.to === st.id), "from"), to: group(routes.filter((r) => r.from === st.id), "to") };
 }
 
 /* ---------------------------------------------------------------------
@@ -1764,6 +2409,7 @@ function convertStation(s, i, counter) {
     workforce: s.workforce,
     workforceNeed,
     workforceByRace,
+    buildsShips: (s.buildProcessors || 0) > 0,
     upkeep: workforceUpkeep(workforceByRace, workforceNeed),
     habitats: s.habitats,
     habitatCapacity: (s.habitats || []).reduce((a, h) => a + ((HABITATS[h] || {}).capacity || 0), 0),
@@ -1891,6 +2537,9 @@ function loadEmpireExtras() {
   const h = readJSON(HISTORY_KEY);
   history = Array.isArray(h) ? h.filter((x) => x && Number.isFinite(x.savedAt) && Number.isFinite(x.profit)) : [];
 
+  const hubs = readJSON(HUBS_KEY);
+  hubOverrides = hubs && typeof hubs === "object" ? hubs : {};
+
   const p = readJSON(PROGRESS_KEY);
   if (p && Number.isFinite(p.highest) && Array.isArray(p.achievements)) {
     progress.highest = p.highest;
@@ -1939,7 +2588,7 @@ function bindEmpireEvents() {
     else state.openGroups.delete(d.dataset.key);
   }, true);
   // 1 to 5 switch Empire tabs
-  const TAB_KEYS = ["overview", "stations", "supply", "prices", "rewards"];
+  const TAB_KEYS = ["overview", "stations", "supply", "logistics", "prices", "rewards"];
   document.addEventListener("keydown", (e) => {
     if (state.view !== "empire" || !$("modal").hidden || e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement || e.target instanceof HTMLTextAreaElement) return;
@@ -1982,7 +2631,15 @@ function bindEmpireEvents() {
       state.view = "planner";
       selectWare(id);
     }
-    else if (action === "toggle-attention") {
+    else if (action === "hub-remove") setHub(id, false);
+    else if (action === "toggle-fleet") {
+      state.fleetAll = !state.fleetAll;
+      renderFleet();
+    }
+    else if (action === "toggle-routes") {
+      state.routesAll = !state.routesAll;
+      renderLogistics();
+    } else if (action === "toggle-attention") {
       state.attentionAll = !state.attentionAll;
       renderAttention();
     } else if (action === "plan") changePlan(id, btn.dataset.key, Number(btn.dataset.step));
@@ -1996,6 +2653,8 @@ function bindEmpireEvents() {
   els.empireView.addEventListener("change", (e) => {
     if (e.target.matches("select[data-action=plan-add]") && e.target.value) {
       changePlan(e.target.dataset.id, e.target.value, 1);
+    } else if (e.target.matches("select[data-action=hub-add]") && e.target.value) {
+      setHub(e.target.value, true);
     }
   });
 
