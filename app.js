@@ -109,7 +109,6 @@ const els = {
   rankLevel: $("rank-level"),
   rankName: $("rank-name"),
   rankFlavor: $("rank-flavor"),
-  rankProfit: $("rank-profit"),
   rankDay: $("rank-day"),
   rankNext: $("rank-next"),
   empireSource: $("empire-source"),
@@ -166,6 +165,25 @@ function getCount(id) {
 
 function isBuilt(id) {
   return getCount(id) > 0;
+}
+
+// units per hour of a mined ware your miners deliver or you buy (from the save)
+function minedBySave(id) {
+  const f = state.empire && state.empire.flows && state.empire.flows.wares && state.empire.flows.wares[id];
+  return f ? f.mined + f.bought : 0;
+}
+
+// a mined ware counts as covered if you ticked it or the save shows it arriving
+function isSourced(id) {
+  return isBuilt(id) || (W[id].isMined && minedBySave(id) > 0);
+}
+
+// modules of this ware stalled across your stations
+function stalledModules(id) {
+  if (!state.empire) return 0;
+  let n = 0;
+  for (const st of state.empire.stations) for (const m of st.modules) if (m.ware === id) n += m.stalled || 0;
+  return n;
 }
 
 // units/hour one module makes with the main recipe at 100% efficiency
@@ -814,7 +832,10 @@ function buildNode(id, data, isRoot) {
       title="${built ? "You have a source for this. Click to unmark." : "Mark as sourced"}"
       aria-label="${built ? "Sourced" : "Mark as sourced"}: ${w.label}">${icon("check", 13)}</button>`;
     need = "Mined";
-    have = built ? `<span class="have">sourced</span>` : `<span>no source marked</span>`;
+    const delivered = minedBySave(id);
+    have = built ? `<span class="have">sourced</span>`
+      : delivered > 0 ? `<span class="have" title="Delivered by your miners or bought, from the save's trade log">${fmtRate(delivered)}/h arriving</span>`
+      : `<span>no source marked</span>`;
   } else {
     control = built
       ? `<span class="node-built" title="Modules you have built">${icon("check", 12)}<input type="number" class="node-module-count" min="0" step="1" value="${built}" aria-label="Modules of ${w.label} built" data-fk="node:${id}:count"></span>`
@@ -836,6 +857,8 @@ function buildNode(id, data, isRoot) {
     }
   }
 
+  const stalled = w.isMined ? 0 : stalledModules(id);
+  if (stalled) el.classList.add("is-stalled");
   el.innerHTML = `
     <div class="node-head">
       <button type="button" class="node-title" data-fk="node:${id}:title">${w.label}</button>
@@ -843,6 +866,7 @@ function buildNode(id, data, isRoot) {
     </div>
     <div class="node-rate"><span class="num">${fmtRate(data.rate)}</span><span class="unit">per hour</span></div>
     <div class="node-need"><span>${need}</span>${have}</div>
+    ${stalled ? `<div class="node-stall" title="Modules of ${w.label} in your stations that are waiting for inputs">${stalled} of yours stalled</div>` : ""}
     <div class="node-meta"><span class="num">${fmtPrice(w.price.avg)}</span><span>${w.storageType}</span></div>
   `;
 
@@ -1110,7 +1134,7 @@ function computeBalance() {
     const pm = perModule(w);
     const dem = demand.get(id) || 0;
     if (!pm) {
-      return { id, tracked: false, demand: dem, supply: 0, net: -dem, short: dem > 0 && !isBuilt(id), modulesNeeded: 0 };
+      return { id, tracked: false, demand: dem, supply: 0, net: -dem, short: dem > 0 && !isSourced(id), modulesNeeded: 0 };
     }
     const sup = supply.get(id) || 0;
     const net = sup - dem;
@@ -1147,7 +1171,7 @@ function computeSuggestions() {
   return Object.values(W)
     .filter((w) => !w.isMined && !isBuilt(w.id))
     .map((w) => {
-      const missing = [...allTransitiveInputs(w.id)].filter((id) => !isBuilt(id));
+      const missing = [...allTransitiveInputs(w.id)].filter((id) => !isSourced(id));
       // one module of it, plus one of each missing input that is built (not mined)
       const cost = moduleCost(w.id, w.mainMethod) +
         missing.filter((id) => !W[id].isMined).reduce((s, id) => s + moduleCost(id, W[id].mainMethod), 0);

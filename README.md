@@ -13,6 +13,8 @@ X4's economy is a real dependency graph. Almost everything needs Energy Cells, m
 ## Features
 
 - **Load your save.** Pick a save file and every player-owned station is read in a few seconds: name, sector, production modules, the race recipe each module runs, its real efficiency (sunlight and workforce included), and the station's workforce. The file is read on your computer and never uploaded.
+- **Do these first.** The Overview ranks the few changes worth most per hour across every tab: habitats, miners, missing modules, trade prices, supplying your own stations, idle ships and hub haulers, each with a button to the right place. Next to it, the estimated earnings and what your empire actually earned from trades sit side by side.
+- **Search (Ctrl+K).** Jump to any tab, ware, station, mission or ship by typing.
 - **Needs attention.** What is going wrong right now, grouped by cause: a mining shortfall with the stations it stalls, low stock, nearly full storage, stations short of workers (with what full staff would add after feeding them). Open a cause to see its stations and jump to one.
 - **Mining coverage.** From the trade log in your save (roughly the last game day), how much of each ore, gas and ice your stations use, how much your miners actually delivered, what you bought from NPCs, how many modules are stalled for it, and about how many more miners would close the gap.
 - **Bought and sold at the same time.** Wares your empire sells to NPCs while also buying them back from NPCs, at the real prices in the log, and what supplying your own stations first would keep.
@@ -26,6 +28,7 @@ X4's economy is a real dependency graph. Almost everything needs Energy Cells, m
 - **Actual earnings.** Next to the estimates, what really happened in the save's trade log: credits your empire took from and paid to NPC stations per hour, and each station's own books (sales minus purchases at real prices). Stations that build ships are marked, because ship sales are not in the trade log.
 - **Ships.** Every freighter and mining ship's standing order checked against what it did in the trade log: ships idle on Wait or with no order, ships on a trade or mining order that made no trades, ships that went quiet for hours, and miners on a well covered ware while another of the same kind runs short.
 - **Per-station earnings.** Every station with its estimated value per hour, at average prices and at its own trade prices. Open one to see each module group (count, efficiency, output, value), what it ships in and out, how long its stock lasts, and how full its storage is.
+- **Production chains that know your save.** Mined wares your miners deliver show how much arrives per hour, and chain nodes show how many of your modules are stalled.
 - **Production chains as a diagram.** Every input of a ware, tier by tier, down to raw materials, sized for the output you want, in modules or units per hour. Each node shows modules needed versus built and flags shortfalls. Hover a node to see how much flows along each connection.
 - **Race recipes and sunlight.** Teladi Hull Parts, Terran Energy Cells and the other race variants use their own inputs and yields wherever your save says they are in use. In the planner you can pick a race's recipes for a whole chain, and the sector your solar plants sit in (sunlight comes from the game files).
 - **Build costs.** The chain shows what its modules cost, what is still missing, and how long the chain takes to pay for itself. Next-build suggestions show their start-up cost too.
@@ -43,7 +46,7 @@ X4's economy is a real dependency graph. Almost everything needs Energy Cells, m
 - **Empire** (top bar) has seven tabs. **Overview**: level, earnings, what needs attention, earnings over time. **Stations**: every station; open one to see its detail and use the plus and minus buttons to plan changes. **Supply**: mining coverage and wares you buy and sell at the same time. **Logistics**: distribution hubs, who runs your transport, ships that are idle or stuck, and the routes between your stations. **Market**: what NPCs are short of, and your prices against theirs. **Missions**: in progress, on offer and done. **Rewards**: levels and achievements.
 - **Planner**: find a ware in the left list (press `/` to search), click its name, and set a target. Each node shows the hourly rate needed and the modules needed versus built.
 - **Click any node or ware** for full details (`Esc` closes them). From the details panel, **Plan this chain** opens it in the Planner.
-- **Keys:** `/` searches wares (or filters stations in the Empire view), `1` to `7` switch Empire tabs.
+- **Keys:** `Ctrl+K` searches everything, `/` searches wares (or filters stations in the Empire view), `1` to `7` switch Empire tabs.
 - **Stations** can be sorted by any column and filtered by name, sector or ware. Hover a dotted column title for what it means. The what-if plan is kept until you clear it or load a new save.
 - **My network** (bottom): supply and demand across everything you have built.
 - Load a newer save whenever you have played more. Built counts you change by hand afterwards are kept on top of the save until the next load.
@@ -109,7 +112,7 @@ Tier 0 is not the same thing as "mined". Energy Cells is tier 0 (a Solar Power P
 
 **Saved data** lives in `localStorage`: `x4-factories-planner:module-counts` (built modules), `x4-factories-planner:empire` (stations and market summary from the last save), `x4-factories-planner:history` (earnings per loaded save), `x4-factories-planner:progress` (highest level and achievements earned), `x4-factories-planner:plan` (the what-if plan), `x4-factories-planner:hubs` (stations you track or untrack as hubs) and `x4-factories-planner:ui` (open chain, target, view, chain options). The remembered save folder is kept in IndexedDB. If storage is unavailable the app still works, it just does not remember.
 
-**Caching note**: if you edit the app's files and a reload does not pick up the change, bump the `?v=31` query string on the `<link>`/`<script>` tags in `index.html`.
+**Caching note**: if you edit the app's files and a reload does not pick up the change, bump the `?v=32` query string on the `<link>`/`<script>` tags in `index.html`.
 
 ## Known limitations
 

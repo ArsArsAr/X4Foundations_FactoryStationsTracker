@@ -1524,7 +1524,7 @@ details[open] > summary.issue { background: var(--surface-2); }
 
 .flow-row { grid-template-columns: minmax(0, 1fr) auto 64px; }
 .flow-row .num.is-short { color: var(--danger); }
-.flow-head { margin-left: 8px; color: var(--text-3); font-size: 11px; font-weight: 400; }
+.flow-head { margin-left: 8px; color: var(--text-3); font-size: 12px; font-weight: 400; }
 
 .fill-row {
   display: grid;
@@ -1574,7 +1574,7 @@ details[open] > summary.issue { background: var(--surface-2); }
 
 /* ---------- prices ---------- */
 
-.prices-note { max-width: 86ch; margin-bottom: 16px; line-height: 1.55; }
+.prices-note { max-width: 75ch; margin-bottom: 16px; line-height: 1.55; }
 .prices-note strong { color: var(--accent); }
 .price-section + .price-section { margin-top: 24px; }
 .price-section h3 { margin-bottom: 6px; color: var(--text-2); font-size: 13px; font-weight: 600; }
@@ -1594,7 +1594,7 @@ details[open] > summary.issue { background: var(--surface-2); }
 .price-row .num.is-ok { color: var(--accent); }
 .price-row .num.dim,
 .price-sub { color: var(--text-3); }
-.price-sub { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.price-sub { overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .price-head { padding-top: 0; color: var(--text-3); font-size: 11.5px; }
 .price-head span:last-child { text-align: right; }
 .price-row > .price-advice { display: block; color: var(--text-2); line-height: 1.45; }
@@ -1638,7 +1638,7 @@ details[open] > summary.issue { background: var(--surface-2); }
 .sup-advice { display: block !important; color: var(--text-2); line-height: 1.45; }
 .sup-advice .tag { margin-right: 6px; }
 .sup-stalled { color: var(--danger); }
-.sup-intro { max-width: 86ch; margin: 0 0 8px; line-height: 1.55; }
+.sup-intro { max-width: 75ch; margin: 0 0 8px; line-height: 1.55; }
 .sup-intro:last-child { margin: 10px 0 0; }
 
 .opp-name { display: flex !important; flex-wrap: wrap; align-items: center; gap: 6px; }
@@ -1709,7 +1709,7 @@ details[open] > summary.issue { background: var(--surface-2); }
 .hub-side h4 { margin-bottom: 4px; color: var(--text-2); font-size: 12px; font-weight: 600; }
 .hub-flow { display: flex; justify-content: space-between; gap: 10px; min-height: 22px; font-size: 12px; color: var(--text-2); }
 .hub-flow .link-btn { color: var(--text); }
-.fill-trend { grid-column: 1 / -1; margin-top: -4px; color: var(--text-3); font-size: 11px; }
+.fill-trend { grid-column: 1 / -1; margin-top: -4px; color: var(--text-3); font-size: 12px; }
 
 .hw-row {
   display: grid;
@@ -2046,3 +2046,155 @@ a.btn { text-decoration: none; }
   *::after { transition: none !important; animation: none !important; }
 }
 .m-offer .price-sub { white-space: normal; text-overflow: clip; }
+
+/* ---------- overview: estimate and actual side by side ---------- */
+
+.rank-dual { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px; }
+.fig { display: grid; gap: 2px; }
+.fig-label { color: var(--text-2); font-size: 12px; font-weight: 500; }
+.fig-num { font-size: 28px; font-weight: 500; letter-spacing: -0.02em; line-height: 1.1; }
+.fig-num.is-ok { color: var(--accent); }
+.fig-num.is-short { color: var(--danger); }
+.fig-unit { color: var(--text-3); font-size: 12px; line-height: 1.4; }
+.rank-figures .rank-day { margin-top: 10px; }
+
+/* ---------- action plan ---------- */
+
+.action-plan { margin-top: 16px; }
+.action-plan[hidden] { display: none; }
+.plan-list { display: grid; gap: 2px; margin: 0 0 10px; padding: 0; list-style: none; }
+.plan-list li {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--line);
+}
+.plan-list li:last-child { border-bottom: 0; }
+.plan-rank { color: var(--text-3); font-size: 13px; text-align: center; }
+.plan-main { display: grid; gap: 2px; min-width: 0; }
+.plan-main strong { color: var(--text); font-size: 13.5px; font-weight: 600; }
+.plan-main span { color: var(--text-3); font-size: 12.5px; line-height: 1.45; }
+.plan-impact { color: var(--accent); font-size: 13px; white-space: nowrap; }
+.plan-list .btn .icon { margin-left: 2px; }
+
+/* ---------- supply: verdict, then detail ---------- */
+
+.sup-advice .tag { margin-right: 8px; }
+.sup-detail { color: var(--text-2); font-size: 12.5px; }
+.sup-detail + .sup-detail { display: block; margin-top: 2px; }
+.rank-bar.is-warn span { background: var(--warn); }
+
+/* ---------- logistics: compact fixes ---------- */
+
+.hub-advice.is-compact li { display: block; padding: 0; }
+.hub-advice.is-compact summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 8px 10px;
+  color: var(--text);
+  font-weight: 500;
+  cursor: pointer;
+  list-style: none;
+}
+.hub-advice.is-compact summary::-webkit-details-marker { display: none; }
+.hub-advice.is-compact details[open] summary { padding-bottom: 4px; }
+.hub-advice.is-compact p { padding: 0 10px 10px; color: var(--text-2); font-size: 12.5px; line-height: 1.5; }
+
+/* ---------- planner: the save's knowledge on the chain ---------- */
+
+.node.is-stalled { border-color: var(--danger-line); }
+.node-stall { margin-top: 4px; color: var(--danger); font-size: 12px; font-weight: 500; }
+
+/* ---------- missions: found by search ---------- */
+
+.m-card { transition: border-color 0.3s var(--ease), box-shadow 0.3s var(--ease); }
+.m-card.is-found { border-color: var(--accent-line); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+/* ---------- search palette ---------- */
+
+.search-btn kbd {
+  margin-left: 4px;
+  padding: 0 5px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-mark);
+  color: var(--text-3);
+  font-family: var(--font-num);
+  font-size: 11px;
+}
+
+#palette {
+  position: fixed;
+  inset: 0;
+  z-index: 25;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 12vh 16px 16px;
+  background: rgba(5, 7, 9, 0.6);
+  animation: modal-fade 0.15s var(--ease);
+}
+#palette[hidden] { display: none; }
+
+.palette-card {
+  width: min(600px, 100%);
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  box-shadow: 0 20px 48px -16px rgba(0, 0, 0, 0.8);
+  animation: modal-rise 0.18s var(--ease);
+}
+
+.palette-field { position: relative; display: block; border-bottom: 1px solid var(--line); }
+.palette-field .search-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-3); }
+#palette-input {
+  width: 100%;
+  height: 50px;
+  padding: 0 16px 0 42px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+}
+#palette-input:focus { outline: none; }
+
+#palette-list { flex: 1; overflow-y: auto; margin: 0; padding: 6px; list-style: none; }
+#palette-list li {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: var(--r-control);
+  font-size: 13px;
+  cursor: pointer;
+}
+#palette-list li.is-active { background: var(--surface-3); }
+.pal-kind { color: var(--text-3); font-size: 11.5px; }
+.pal-label { overflow: hidden; color: var(--text); text-overflow: ellipsis; white-space: nowrap; }
+.pal-sub { overflow: hidden; max-width: 220px; color: var(--text-3); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+#palette-list li.pal-empty { display: block; color: var(--text-3); cursor: default; }
+
+.palette-hint { padding: 8px 14px; border-top: 1px solid var(--line); color: var(--text-3); font-size: 11.5px; }
+.palette-hint kbd {
+  margin-right: 3px;
+  padding: 0 5px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-mark);
+  font-family: var(--font-num);
+  font-size: 11px;
+}
+
+@media (max-width: 1100px) {
+  .search-btn kbd { display: none; }
+  .plan-list li { grid-template-columns: 22px minmax(0, 1fr) auto; }
+  .plan-list .btn { grid-column: 2 / -1; justify-self: start; }
+}

@@ -93,6 +93,7 @@ const TERMS = {
   forsale: "Units NPC stations are offering for sale right now.",
   onemodule: "What one module adds per hour at local prices: output at the typical NPC buying price, minus inputs at the typical NPC selling price.",
   payback: "Build cost of one module divided by what it adds per hour.",
+  estimate: "What your modules make per hour, minus their inputs and their workers' food, everything at the game's average prices. Assumes every module runs and everything sells.",
   actual: "Credits that really changed hands with NPC stations in the save's trade log, per hour. Trades between your own stations and ships are left out: that money stays in your empire. Stock that piles up or runs down is not counted.",
   stationactual: "This station's own books from the trade log, per hour: what it sold minus what it bought, at the real prices, including trades with your own ships.",
   fleettrades: "Trades this ship made in the save's trade log (loading and delivering both count).",
@@ -565,15 +566,26 @@ function renderOverview() {
   els.rankLevel.textContent = `Level ${index + 1} of ${LEVELS.length}`;
   els.rankName.textContent = level.name;
   els.rankFlavor.textContent = level.flavor;
-  els.rankProfit.textContent = fmtCredits(Math.max(0, profit));
-
   const own = state.empire && state.empire.stations.some((st) => st.offers) ? empireOwnProfit() : null;
   const actual = actualProfit();
   const a = actual !== null ? state.empire.flows.actual : null;
+  $("rank-dual").innerHTML = `
+    <div class="fig">
+      <span class="fig-label"><span class="term" title="${escapeHTML(TERMS.estimate)}">Estimated</span></span>
+      <span class="fig-num num">${fmtCredits(Math.max(0, profit))}</span>
+      <span class="fig-unit">Cr per hour at average prices</span>
+    </div>
+    ${a ? `<div class="fig">
+      <span class="fig-label"><span class="term" title="${escapeHTML(TERMS.actual)}">Actually earned</span></span>
+      <span class="fig-num num ${actual >= 0 ? "is-ok" : "is-short"}">${actual >= 0 ? "+" : ""}${fmtCredits(actual)}</span>
+      <span class="fig-unit">Cr per hour from trades, last ${Math.round(state.empire.flows.hours)} h</span>
+    </div>` : ""}`;
   els.rankDay.innerHTML = profit > 0
-    ? `About ${fmtCredits(profit * 24)} Cr per in-game day at average prices.` +
-      (own !== null ? `<br>At your own trade prices: <strong class="num">${fmtCredits(own)}</strong> Cr per hour.` : "") +
-      (a ? `<br><span class="term" title="${escapeHTML(TERMS.actual)}">Actually traded</span> over the last ${Math.round(state.empire.flows.hours)} h: <strong class="num ${actual >= 0 ? "is-ok" : "is-short"}">${actual >= 0 ? "+" : ""}${fmtCredits(actual)}</strong> Cr per hour (sold ${fmtCredits(a.revenue)}, bought ${fmtCredits(a.cost)})${state.empire.stations.some((st) => st.buildsShips) ? `. Ship sales at your wharfs are not in the log, only what they buy` : ""}.` : "")
+    ? [
+        own !== null ? `At your own trade prices: <strong class="num">${fmtCredits(own)}</strong> Cr per hour.` : "",
+        a ? `Sold ${fmtCredits(a.revenue)}, bought ${fmtCredits(a.cost)} per hour${state.empire.stations.some((st) => st.buildsShips) ? "; ship sales at your wharfs are not in the trade log" : ""}.` : "",
+        "Your level uses the estimate, so it does not jump with prices.",
+      ].filter(Boolean).join("<br>")
     : "Track some production modules to start earning a rank.";
 
   if (next) {
@@ -589,6 +601,7 @@ function renderOverview() {
 
   document.querySelector(".rank-share").hidden = !(profit > 0);
   renderEmpireSource();
+  renderActionPlan();
   renderAttention();
   renderHistory();
 }
@@ -1434,17 +1447,17 @@ function renderSupply() {
     ? `<div class="sup-row sup-head"><span>Ware</span><span>${term("Needed", "needed")}</span><span>${term("Your miners", "miners")}</span><span>${term("Bought", "bought")}</span><span>${term("Covered", "covered")}</span><span>What to do</span></div>
       ${rows.map((r) => {
         let advice;
-        if (r.more) advice = `<span class="tag is-short">+${r.more}</span> About ${r.more} more ${plural(r.more, "miner")} to cover the shortfall.`;
-        else if (r.moreToStopBuying && r.bought > 0) advice = `Covered, partly by buying. ${r.moreToStopBuying} more ${plural(r.moreToStopBuying, "miner")} would stop the buying.`;
-        else if (r.need) advice = "Covered.";
-        else advice = "Nothing uses it right now.";
-        if (r.stalled) advice += ` <span class="sup-stalled">${r.stalled} ${plural(r.stalled, "module")} stalled waiting for it, at ${stationNames(r.stalledAt)}.</span>`;
+        if (r.more) advice = `<span class="tag ${r.stalled ? "is-short" : "is-warn"}">+${r.more} ${plural(r.more, "miner")}</span>`;
+        else if (r.moreToStopBuying && r.bought > 0) advice = `<span class="tag is-plain">covered by buying</span><span class="sup-detail">${r.moreToStopBuying} more ${plural(r.moreToStopBuying, "miner")} would end the buying</span>`;
+        else if (r.need) advice = `<span class="tag is-ok">covered</span>`;
+        else advice = `<span class="dim">not used</span>`;
+        if (r.stalled) advice += `<span class="sup-detail" title="${escapeHTML(r.stalledAt.map(stationLabel).join(", "))}">${r.stalled} ${plural(r.stalled, "module")} stalled at ${r.stalledAt.length} ${plural(r.stalledAt.length, "station")}</span>`;
         return `<div class="sup-row${r.more ? " is-short" : ""}">
           <button type="button" class="net-name" data-action="inspect" data-id="${r.ware}">${W[r.ware].label}</button>
           <span class="num">${fmtRate(r.need)}/h</span>
           <span><span class="num">${fmtRate(r.mined)}/h</span><span class="price-sub">${r.miners} ${plural(r.miners, "miner")} worked it</span></span>
           <span><span class="num ${r.bought ? "" : "dim"}">${fmtRate(r.bought)}/h</span>${r.buyPrice ? `<span class="price-sub">at ${fmtPrice(Math.round(r.buyPrice))}</span>` : ""}</span>
-          <span class="sup-cover"><span class="rank-bar${r.cover < 0.999 ? " is-full" : ""}"><span style="transform:scaleX(${r.cover})"></span></span><span class="num">${fmtPercent(r.cover)}</span></span>
+          <span class="sup-cover"><span class="rank-bar${r.stalled ? " is-full" : r.cover < 0.95 ? " is-warn" : ""}"><span style="transform:scaleX(${r.cover})"></span></span><span class="num">${fmtPercent(r.cover)}</span></span>
           <span class="sup-advice">${advice}</span>
         </div>`;
       }).join("")}`
@@ -1889,7 +1902,7 @@ function hubCard(st) {
       </div>
       <button type="button" class="btn is-small is-ghost" data-action="hub-remove" data-id="${escapeHTML(st.id)}">Stop tracking</button>
     </div>
-    ${h.advice.length ? `<ul class="hub-advice">${h.advice.map((a) => `<li class="sev-${a.sev}"><span class="tag ${SEV[a.sev]}">${SEV_LABEL[a.sev]}</span><span><strong>${escapeHTML(a.text)}</strong> ${escapeHTML(a.fix)}</span></li>`).join("")}</ul>`
+    ${h.advice.length ? `<ul class="hub-advice is-compact">${h.advice.map((a) => `<li class="sev-${a.sev}"><details><summary><span class="tag ${SEV[a.sev]}">${SEV_LABEL[a.sev]}</span><span>${escapeHTML(a.text)}</span></summary><p>${escapeHTML(a.fix)}</p></details></li>`).join("")}</ul>`
       : `<p class="quiet-note all-good">${icon("check", 13)}Running smoothly: nothing piling up, nothing your factories wait for.</p>`}
     <div class="hub-body">
       <div class="hub-wares">
@@ -2182,12 +2195,12 @@ function missionCard(m, children) {
         return `<li class="${cls}"><span class="m-dot">${o.step < p.current ? icon("check", 10) : ""}</span><span>${escapeHTML(label)}</span></li>`;
       }).join("")}</ol>`
     : "";
-  const bar = p
+  const bar = p && p.total > 1
     ? `<div class="m-progress"><div class="rank-bar"><span style="transform:scaleX(${p.fraction})"></span></div><span class="num">Step ${p.current} of ${p.total}</span></div>`
-    : children && children.length
+    : !p && children && children.length
       ? `<p class="quiet-note">${children.length} ${plural(children.length, "mission")} open in this story.</p>`
       : "";
-  return `<article class="m-card${children ? " is-thread" : ""}">
+  return `<article class="m-card${children ? " is-thread" : ""}" data-mission="${escapeHTML(m.id)}">
     <div class="m-head">
       <div>
         <h3>${escapeHTML(m.name)}</h3>
@@ -2271,6 +2284,297 @@ function renderMissions() {
     <section class="section-gap" aria-labelledby="m-upkeep-title"><div class="stations-head"><h2 id="m-upkeep-title">Station and ship upkeep</h2></div>${upkeep}</section>
     <section class="section-gap" aria-labelledby="m-offers-title"><div class="stations-head"><h2 id="m-offers-title">On offer</h2></div>${offerList || `<p class="quiet-note">No offers right now.</p>`}</section>
     <section class="section-gap" aria-labelledby="m-done-title"><div class="stations-head"><h2 id="m-done-title">Done</h2></div>${log}</section>`;
+}
+
+/* ---------------------------------------------------------------------
+   Action plan: the few things worth doing first, gathered from every
+   tab and ranked by what they are worth per hour.
+--------------------------------------------------------------------- */
+
+function actionPlan() {
+  const e = state.empire;
+  if (!e) return [];
+  const items = [];
+
+  // output lost to stalls, per missing ware (a module short of two wares
+  // splits its loss between them)
+  const lost = new Map();
+  for (const st of e.stations) {
+    for (const m of st.modules) {
+      if (!m.stalled) continue;
+      const short = (m.short || []).filter((w) => W[w]);
+      if (!short.length) continue;
+      const v = (Math.max(0, moduleValue(m.ware, m.method, m.efficiency)) * m.stalled) / short.length;
+      for (const w of short) lost.set(w, (lost.get(w) || 0) + v);
+    }
+  }
+
+  if (e.flows) {
+    for (const r of miningRows()) {
+      if (!r.more) continue;
+      items.push({
+        impact: lost.get(r.ware) || 0,
+        title: `Add about ${r.more} ${W[r.ware].storageType === "Liquid" ? "gas" : "solid"} ${plural(r.more, "miner")} for ${W[r.ware].label}`,
+        why: `Supply covers ${fmtPercent(r.cover)} of what your stations use${r.stalled ? `, and ${r.stalled} ${plural(r.stalled, "module")} are stalled for it` : ""}.`,
+        tab: "supply", label: "Supply",
+      });
+    }
+  }
+  const balance = computeBalance();
+  for (const [w, v] of lost) {
+    if (W[w].isMined || v <= 0) continue;
+    const row = balance.find((b) => b.id === w);
+    const n = row && row.modulesNeeded ? row.modulesNeeded : 0;
+    items.push({
+      impact: v,
+      title: n ? `Build ${n} more ${W[w].label} ${plural(n, "module")}` : `Get more ${W[w].label} to your factories`,
+      why: `Factories are stalled waiting for ${W[w].label}.`,
+      ware: w, label: "Plan chain",
+    });
+  }
+
+  const shortStaffed = e.stations.filter((st) => st.workforceNeed && st.workforce < st.workforceNeed * 0.9);
+  const staffGain = shortStaffed.reduce((s, st) => s + workforceGain(st), 0);
+  if (staffGain > 0) {
+    items.push({
+      impact: staffGain,
+      title: `Add habitats at ${shortStaffed.length} ${plural(shortStaffed.length, "station")}`,
+      why: "A full workforce speeds up production; this is after feeding the extra workers.",
+      tab: "stations", sort: "workforce", label: "Stations",
+    });
+  }
+
+  if (e.flows) {
+    const internal = internalRows().filter((r) => r.gain > 0);
+    const gain = internal.reduce((s, r) => s + r.gain, 0);
+    if (gain > 0) {
+      items.push({
+        impact: gain,
+        title: "Supply your own stations before buying from NPCs",
+        why: `${internal.length} ${plural(internal.length, "ware")} sold to NPCs and bought back, ${W[internal[0].ware].label} most of all.`,
+        tab: "supply", label: "Supply",
+      });
+    }
+  }
+
+  if (e.market) {
+    const tips = priceAdvice().filter((r) => r.effect > 0).sort((a, b) => b.effect - a.effect);
+    const gain = tips.reduce((s, r) => s + r.effect, 0);
+    if (gain > 0) {
+      items.push({
+        impact: gain,
+        title: `Adjust ${tips.length} trade ${plural(tips.length, "price")}`,
+        why: `${W[tips[0].ware].label} first: ${tips[0].text.charAt(0).toLowerCase()}${tips[0].text.slice(1)}`,
+        tab: "prices", label: "Market",
+      });
+    }
+  }
+
+  const ships = (fleetProblems() || []).filter((p) => p.sev >= 2);
+  if (ships.length) {
+    items.push({
+      impact: null,
+      title: `Put ${ships.length} idle or stuck ${plural(ships.length, "ship")} to work`,
+      why: "Ships you already own, sitting on Wait or making no trades.",
+      tab: "logistics", label: "Logistics",
+    });
+  }
+  if (e.flows && e.flows.routes) {
+    for (const st of e.stations.filter(isHub)) {
+      const haul = hubReport(st).advice.find((a) => a.sev === 3 && /more arrives than leaves/.test(a.fix));
+      if (haul) {
+        items.push({
+          impact: null,
+          title: `Assign more haulers to ${stationLabel(st)}`,
+          why: "More arrives at the hub than leaves it, while factories wait.",
+          tab: "logistics", label: "Logistics",
+        });
+      }
+    }
+  }
+
+  return items.sort((a, b) => (b.impact === null ? -1 : b.impact) - (a.impact === null ? -1 : a.impact));
+}
+
+function renderActionPlan() {
+  const box = $("action-plan");
+  const items = actionPlan();
+  box.hidden = !state.empire;
+  if (!state.empire) return;
+  if (!items.length) {
+    box.innerHTML = `<h2>Do these first</h2><p class="quiet-note all-good">${icon("check", 13)}Nothing urgent. Your empire is running well.</p>`;
+    return;
+  }
+  const LIMIT = 5;
+  const shown = items.slice(0, LIMIT);
+  box.innerHTML = `
+    <h2>Do these first</h2>
+    <ol class="plan-list">${shown.map((it, i) => `
+      <li>
+        <span class="plan-rank num">${i + 1}</span>
+        <span class="plan-main"><strong>${escapeHTML(it.title)}</strong><span>${escapeHTML(it.why)}</span></span>
+        <span class="plan-impact num">${it.impact ? `+${fmtCredits(it.impact)} Cr/h` : ""}</span>
+        <button type="button" class="btn is-small" ${it.ware ? `data-action="plan-ware" data-id="${it.ware}"` : `data-action="open-tab" data-id="${it.tab}"${it.sort ? ` data-sort="${it.sort}"` : ""}`}>${it.label}${icon("arrow-right", 11)}</button>
+      </li>`).join("")}
+    </ol>
+    <p class="quiet-note">Gains are estimates at average prices, so they show what matters most, not exact credits.${items.length > LIMIT ? ` ${items.length - LIMIT} more in Needs attention.` : ""}</p>`;
+}
+
+/* ---------------------------------------------------------------------
+   Search (Ctrl+K): jump to any tab, ware, station, mission or ship.
+--------------------------------------------------------------------- */
+
+const palette = { items: [], results: [], active: 0, returnFocus: null };
+
+function paletteItems() {
+  const items = [];
+  const tabs = [["overview", "Overview"], ["stations", "Stations"], ["supply", "Supply"], ["logistics", "Logistics"], ["prices", "Market"], ["missions", "Missions"], ["rewards", "Rewards"]];
+  items.push({ kind: "View", label: "Planner", sub: "production chains", run: () => setView("planner") });
+  for (const [id, label] of tabs) {
+    items.push({ kind: "Tab", label, sub: "Empire", run: () => { state.view = "empire"; setEmpireTab(id); } });
+  }
+  for (const w of Object.values(W)) {
+    items.push({ kind: "Ware", label: w.label, sub: w.isMined ? "mined" : TIER_LABELS[w.tier] || `Tier ${w.tier}`, run: () => { state.view = "planner"; selectWare(w.id); } });
+  }
+  const e = state.empire;
+  if (e) {
+    for (const st of e.stations) {
+      items.push({ kind: "Station", label: stationLabel(st), sub: st.sectorName, run: () => { state.view = "empire"; openStation(st.id); } });
+    }
+    for (const m of (e.missions && e.missions.active) || []) {
+      items.push({ kind: "Mission", label: m.name, sub: missionType(m.type), run: () => openMission(m.id) });
+    }
+    for (const s of (e.flows && e.flows.fleet) || []) {
+      items.push({
+        kind: "Ship", label: s.name || s.code, sub: `${s.type}${s.home ? `, works for ${routeName(s.home)}` : ""}`,
+        run: () => { state.view = "empire"; if (s.home) openStation(s.home); else setEmpireTab("logistics"); },
+      });
+    }
+  }
+  return items;
+}
+
+function openMission(id) {
+  state.view = "empire";
+  setEmpireTab("missions");
+  const card = document.querySelector(`.m-card[data-mission="${CSS.escape(id)}"]`);
+  if (card) {
+    card.scrollIntoView({ block: "center" });
+    card.classList.add("is-found");
+    setTimeout(() => card.classList.remove("is-found"), 1600);
+  }
+}
+
+function searchPalette(q) {
+  const query = q.trim().toLowerCase();
+  if (!query) return palette.items.filter((it) => it.kind === "View" || it.kind === "Tab");
+  const score = (it) => {
+    const label = it.label.toLowerCase();
+    if (label.startsWith(query)) return 4;
+    if (label.split(/[\s(,]+/).some((w) => w.startsWith(query))) return 3;
+    if (label.includes(query)) return 2;
+    if ((it.sub || "").toLowerCase().includes(query)) return 1;
+    return 0;
+  };
+  const ORDER = { View: 0, Tab: 1, Station: 2, Ware: 3, Mission: 4, Ship: 5 };
+  return palette.items
+    .map((it) => ({ it, s: score(it) }))
+    .filter((x) => x.s > 0)
+    .sort((a, b) => b.s - a.s || ORDER[a.it.kind] - ORDER[b.it.kind] || a.it.label.localeCompare(b.it.label))
+    .slice(0, 14)
+    .map((x) => x.it);
+}
+
+function renderPalette() {
+  const list = $("palette-list");
+  const input = $("palette-input");
+  palette.results = searchPalette(input.value);
+  palette.active = Math.min(palette.active, Math.max(0, palette.results.length - 1));
+  list.innerHTML = palette.results.length
+    ? palette.results.map((it, i) => `
+      <li role="option" id="pal-${i}" aria-selected="${i === palette.active}" class="${i === palette.active ? "is-active" : ""}" data-index="${i}">
+        <span class="pal-kind">${it.kind}</span>
+        <span class="pal-label">${escapeHTML(it.label)}</span>
+        <span class="pal-sub">${escapeHTML(it.sub || "")}</span>
+      </li>`).join("")
+    : `<li class="pal-empty">Nothing matches "${escapeHTML(input.value.trim())}".</li>`;
+  input.setAttribute("aria-activedescendant", palette.results.length ? `pal-${palette.active}` : "");
+  const active = list.querySelector(".is-active");
+  if (active) active.scrollIntoView({ block: "nearest" });
+}
+
+function openPalette() {
+  const box = $("palette");
+  if (!box.hidden) return;
+  palette.items = paletteItems();
+  palette.active = 0;
+  palette.returnFocus = document.activeElement;
+  box.hidden = false;
+  const input = $("palette-input");
+  input.value = "";
+  renderPalette();
+  input.focus();
+}
+
+function closePalette() {
+  const box = $("palette");
+  if (box.hidden) return;
+  box.hidden = true;
+  if (palette.returnFocus && palette.returnFocus.isConnected) palette.returnFocus.focus();
+}
+
+function runPalette(i) {
+  const it = palette.results[i];
+  if (!it) return;
+  closePalette();
+  it.run();
+}
+
+function bindPalette() {
+  const box = $("palette");
+  const input = $("palette-input");
+  $("search-open").addEventListener("click", openPalette);
+  document.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+      e.preventDefault();
+      if (box.hidden) openPalette();
+      else closePalette();
+    }
+  });
+  input.addEventListener("input", () => {
+    palette.active = 0;
+    renderPalette();
+  });
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      palette.active = Math.min(palette.results.length - 1, palette.active + 1);
+      renderPalette();
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      palette.active = Math.max(0, palette.active - 1);
+      renderPalette();
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      runPalette(palette.active);
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+      closePalette();
+    }
+  });
+  box.addEventListener("click", (e) => {
+    if (e.target === box) return closePalette();
+    const li = e.target.closest("li[data-index]");
+    if (li) runPalette(Number(li.dataset.index));
+  });
+  box.addEventListener("mousemove", (e) => {
+    const li = e.target.closest("li[data-index]");
+    if (li && Number(li.dataset.index) !== palette.active) {
+      palette.active = Number(li.dataset.index);
+      renderPalette();
+    }
+  });
 }
 
 /* ---------------------------------------------------------------------
@@ -2788,6 +3092,7 @@ function bindEmpireEvents() {
     setEmpireTab("overview");
   });
   els.loadSave.addEventListener("click", () => loadNewestSave());
+  bindPalette();
   $("station-filter").addEventListener("input", (e) => {
     state.stationFilter = e.target.value;
     renderStationsTab();
@@ -2839,7 +3144,10 @@ function bindEmpireEvents() {
       state.openStation = state.openStation === id ? null : id;
       renderStationsTab();
     } else if (action === "open-station") openStation(id);
-    else if (action === "open-tab") setEmpireTab(id);
+    else if (action === "open-tab") {
+      if (btn.dataset.sort) state.stationSort = { key: btn.dataset.sort, dir: 1 };
+      setEmpireTab(id);
+    }
     else if (action === "plan-ware") {
       state.view = "planner";
       selectWare(id);
