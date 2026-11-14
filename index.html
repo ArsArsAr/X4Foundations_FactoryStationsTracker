@@ -7,7 +7,7 @@
 <meta name="description" content="Production chain planner for X4: Foundations. See what a ware needs, track what you have built, find shortfalls.">
 <title>X4 Factories Planner</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23131619'/%3E%3Cpath d='M11 10h5v6h5M11 22h5v-6' fill='none' stroke='%2339414a' stroke-width='2'/%3E%3Crect x='5' y='7' width='7' height='6' rx='1.5' fill='%23a9b1ba'/%3E%3Crect x='5' y='19' width='7' height='6' rx='1.5' fill='%23a9b1ba'/%3E%3Crect x='20' y='12' width='8' height='8' rx='2' fill='%234fcab9'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="style.css?v=24">
+<link rel="stylesheet" href="style.css?v=25">
 </head>
 <body>
 <div id="app">
@@ -26,10 +26,10 @@
     <div class="topbar-actions">
       <button type="button" class="btn is-primary" id="load-save" title="Read your stations and modules from an X4 save file"><span data-icon="folder-open"></span>Load save</button>
       <input type="file" id="save-file" accept=".gz,.xml,application/gzip,application/xml" hidden>
-      <button type="button" class="btn" id="export-data" title="Save your built modules to a file"><span data-icon="download-simple"></span>Export</button>
-      <button type="button" class="btn" id="import-data" title="Load built modules from a file"><span data-icon="upload-simple"></span>Import</button>
+      <button type="button" class="btn" id="export-data" title="Save your built modules to a file" aria-label="Export"><span data-icon="download-simple"></span><span class="btn-label">Export</span></button>
+      <button type="button" class="btn" id="import-data" title="Load built modules from a file" aria-label="Import"><span data-icon="upload-simple"></span><span class="btn-label">Import</span></button>
       <input type="file" id="import-file" accept="application/json,.json" hidden>
-      <button type="button" class="btn" id="clear-data" title="Clear everything you have marked as built"><span data-icon="arrow-counter-clockwise"></span><span id="clear-data-label">Reset</span></button>
+      <button type="button" class="btn" id="clear-data" title="Clear everything you have marked as built"><span data-icon="arrow-counter-clockwise"></span><span class="btn-label" id="clear-data-label">Reset</span></button>
     </div>
   </header>
 
@@ -97,11 +97,12 @@
 
     <main id="empire-view" hidden>
       <nav class="tabs" aria-label="Empire sections">
-        <button type="button" data-tab="overview" aria-pressed="true">Overview</button>
-        <button type="button" data-tab="stations" aria-pressed="false">Stations</button>
-        <button type="button" data-tab="supply" aria-pressed="false">Supply</button>
-        <button type="button" data-tab="prices" aria-pressed="false">Market</button>
-        <button type="button" data-tab="rewards" aria-pressed="false">Rewards</button>
+        <button type="button" data-tab="overview" aria-pressed="true" title="Press 1">Overview</button>
+        <button type="button" data-tab="stations" aria-pressed="false" title="Press 2">Stations</button>
+        <button type="button" data-tab="supply" aria-pressed="false" title="Press 3">Supply</button>
+        <button type="button" data-tab="prices" aria-pressed="false" title="Press 4">Market</button>
+        <button type="button" data-tab="rewards" aria-pressed="false" title="Press 5">Rewards</button>
+        <span class="save-age" id="save-age" hidden></span>
       </nav>
 
       <div class="tab-panel" data-panel="overview">
@@ -139,8 +140,13 @@
         <section class="stations" aria-labelledby="stations-title">
           <div class="stations-head">
             <h2 id="stations-title">Stations</h2>
-            <p class="quiet-note" id="stations-note"></p>
+            <label class="filter-field">
+              <span class="sr-only">Filter stations</span>
+              <span class="search-icon" data-icon="magnifying-glass"></span>
+              <input type="search" id="station-filter" placeholder="Filter by name, sector or ware" autocomplete="off" spellcheck="false">
+            </label>
           </div>
+          <p class="quiet-note stations-note" id="stations-note"></p>
           <div id="station-list"></div>
         </section>
       </div>
@@ -229,11 +235,11 @@
   </div>
 </div>
 
-<script src="data/wares.js?v=24"></script>
-<script src="savegame.js?v=24"></script>
-<script src="badges.js?v=24"></script>
-<script src="app.js?v=24"></script>
-<script src="empire.js?v=24"></script>
+<script src="data/wares.js?v=25"></script>
+<script src="savegame.js?v=25"></script>
+<script src="badges.js?v=25"></script>
+<script src="app.js?v=25"></script>
+<script src="empire.js?v=25"></script>
 <script>init();</script>
 </body>
 </html>

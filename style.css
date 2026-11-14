@@ -251,22 +251,38 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
   letter-spacing: -0.005em;
 }
 
+/* status messages float as a toast, so they never push the top bar buttons */
 #status {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  color: var(--text-2);
+  position: fixed;
+  right: 16px;
+  bottom: 52px;
+  z-index: 15;
+  max-width: min(440px, calc(100vw - 32px));
+  padding: 9px 13px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-control);
+  background: var(--surface-2);
+  color: var(--text);
   font-size: 12.5px;
-  text-align: right;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.45;
+  box-shadow: 0 12px 28px -14px rgba(0, 0, 0, 0.75);
+  pointer-events: none;
+  animation: modal-rise 0.2s var(--ease);
 }
+
+#status:empty { display: none; }
 
 .topbar-actions {
   display: flex;
   gap: 6px;
   flex-shrink: 0;
+  margin-left: auto;
 }
+
+/* the Empire view gets the full width: no ware list, no network drawer */
+#app[data-view="empire"] #sidebar,
+#app[data-view="empire"] #network { display: none; }
+#app[data-view="empire"] #layout { grid-template-columns: minmax(0, 1fr) auto; }
 
 #layout {
   display: grid;
@@ -345,7 +361,8 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
 }
 
 .segmented button {
-  height: 24px;
+  height: 26px;
+  padding: 0 8px;
   border: 0;
   border-radius: var(--r-mark);
   background: transparent;
@@ -458,10 +475,10 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
   width: 38px;
   height: 22px;
   padding: 0 4px;
-  border: 1px solid var(--accent-line);
+  border: 1px solid var(--line-strong);
   border-radius: var(--r-mark);
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: var(--surface-3);
+  color: var(--text);
   font-size: 12px;
   font-weight: 500;
   text-align: center;
@@ -656,9 +673,9 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
   gap: 3px;
   height: 24px;
   padding: 0 3px 0 6px;
-  border: 1px solid var(--accent-line);
+  border: 1px solid var(--line-strong);
   border-radius: var(--r-control);
-  background: var(--accent-soft);
+  background: var(--surface-3);
   color: var(--accent);
   flex-shrink: 0;
 }
@@ -671,7 +688,7 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
   padding: 0;
   border: 0;
   background: transparent;
-  color: var(--accent);
+  color: var(--text);
   font-size: 12px;
   font-weight: 600;
   text-align: center;
@@ -1278,7 +1295,7 @@ button.st-row:focus-visible { outline-offset: -2px; }
   border-bottom: 1px solid var(--line);
 }
 
-.tabs button {
+.tabs button[data-tab] {
   position: relative;
   height: 34px;
   padding: 0 14px;
@@ -1291,9 +1308,9 @@ button.st-row:focus-visible { outline-offset: -2px; }
   transition: color 0.12s var(--ease);
 }
 
-.tabs button:hover { color: var(--text); }
-.tabs button[aria-pressed="true"] { color: var(--text); }
-.tabs button[aria-pressed="true"]::after {
+.tabs button[data-tab]:hover { color: var(--text); }
+.tabs button[data-tab][aria-pressed="true"] { color: var(--text); }
+.tabs button[data-tab][aria-pressed="true"]::after {
   content: "";
   position: absolute;
   right: 10px;
@@ -1301,7 +1318,7 @@ button.st-row:focus-visible { outline-offset: -2px; }
   left: 10px;
   height: 2px;
   border-radius: 1px;
-  background: var(--accent);
+  background: var(--text);
 }
 
 .rank-share { margin-top: 12px; }
@@ -1321,6 +1338,76 @@ button.st-row:focus-visible { outline-offset: -2px; }
 }
 
 .card h2 { margin-bottom: 10px; font-size: 14px; font-weight: 600; }
+
+/* ---------- save age, terms, sorting, filter ---------- */
+
+.save-age {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding: 0 4px 0 12px;
+  color: var(--text-3);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.save-age[hidden] { display: none; }
+.save-age.is-stale { color: var(--warn); }
+
+.link-btn {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.link-btn:hover { color: var(--accent); }
+
+.term {
+  text-decoration: underline dotted var(--text-3);
+  text-underline-offset: 3px;
+  cursor: help;
+}
+
+.sort-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.sort-btn:hover,
+.sort-btn.is-active { color: var(--text); }
+.sort-btn.is-asc .icon { transform: rotate(180deg); }
+.st-head > span { display: flex; }
+.st-head > span:nth-child(n + 4) { justify-content: flex-end; }
+
+.filter-field { position: relative; width: min(280px, 50%); }
+.filter-field input {
+  width: 100%;
+  height: 30px;
+  padding: 0 10px 0 30px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-control);
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 12.5px;
+}
+
+.filter-field input:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.stations-note { margin: 0 0 8px; }
+.st-empty { padding: 14px 10px; }
 
 /* ---------- needs attention ---------- */
 
@@ -1348,6 +1435,43 @@ button.st-row:focus-visible { outline-offset: -2px; }
 .issue-text { display: grid; gap: 1px; min-width: 0; }
 .issue-title { font-size: 13px; font-weight: 500; }
 .issue-sub { color: var(--text-3); font-size: 12px; line-height: 1.45; }
+
+summary.issue { grid-template-columns: 18px minmax(0, 1fr) auto; list-style: none; }
+summary.issue::-webkit-details-marker { display: none; }
+button.issue { grid-template-columns: 18px minmax(0, 1fr) auto; }
+.issue-count {
+  align-self: start;
+  min-width: 24px;
+  padding: 1px 6px;
+  border-radius: var(--r-mark);
+  background: var(--surface-3);
+  color: var(--text-2);
+  font-size: 11.5px;
+  text-align: center;
+}
+
+.issue-go { align-self: center; color: var(--text-3); }
+details[open] > summary.issue { background: var(--surface-2); }
+.issue-items { display: grid; gap: 1px; margin: 2px 0 8px 28px; padding: 0; list-style: none; }
+
+.issue-item {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 12px;
+  width: 100%;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: var(--r-mark);
+  background: transparent;
+  color: var(--text-2);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.issue-item:hover { background: var(--surface-2); color: var(--text); }
+.issue-item-st { overflow: hidden; color: var(--text); text-overflow: ellipsis; white-space: nowrap; }
+.issue-item.is-link { display: inline-flex; align-items: center; gap: 6px; width: auto; color: var(--text-2); text-decoration: underline; text-underline-offset: 2px; }
 .all-good { display: flex; align-items: center; gap: 8px; color: var(--accent); }
 .btn.is-ghost { border-color: transparent; background: transparent; color: var(--text-2); }
 
@@ -1446,6 +1570,7 @@ button.st-row:focus-visible { outline-offset: -2px; }
 
 .chain-cost { color: var(--text-3); font-size: 12px; line-height: 1.5; }
 .chain-cost strong { color: var(--text-2); font-weight: 500; }
+.chain-cost .cost-line { display: block; }
 
 /* ---------- prices ---------- */
 
@@ -1684,6 +1809,7 @@ a.btn { text-decoration: none; }
 
 @media (max-width: 1100px) {
   .topbar-actions .btn:not(.is-primary) { padding: 0 8px; }
+  .topbar-actions .btn:not(.is-primary):not(.is-confirming) .btn-label { display: none; }
   .rank-chip-name { display: none; }
   #level-ladder { grid-template-columns: repeat(5, minmax(0, 1fr)); }
   .st-row { grid-template-columns: 16px minmax(0, 1.6fr) minmax(0, 1fr) 56px 76px 76px; }

@@ -262,8 +262,17 @@ function fmtPercent(x) {
   return `${Math.round(x * 100)}%`;
 }
 
+// Named stations keep their name; unnamed ones say what they make, so
+// "RHK-687 (Silicon Wafers, Energy Cells)" instead of a bare code.
 function stationLabel(st) {
-  return st.name || `Station ${st.code || "?"}`;
+  if (st.name) return st.name;
+  const code = st.code || "?";
+  const made = [...(st.modules || [])]
+    .sort((a, b) => b.count - a.count)
+    .map((m) => W[m.ware].label)
+    .filter((label, i, all) => all.indexOf(label) === i)
+    .slice(0, 2);
+  return made.length ? `${code} (${made.join(", ")})` : `Station ${code}`;
 }
 
 function trimNumber(n) {
@@ -729,9 +738,9 @@ function renderChainOptions() {
   const minedCost = ids.filter((id) => W[id].isMined).reduce((s, id) => s + chain.nodes[id].rate * W[id].price.avg, 0);
   const value = state.targetRate * W[state.selected].price.avg - minedCost;
   const n = (v) => `<strong class="num">${v}</strong>`;
-  let text = `Whole chain: ${n(fullN)} ${plural(fullN, "module")} for about ${n(fmtCredits(fullCost))} Cr, ` +
-    (missN ? `${n(missN)} still to build (about ${n(fmtCredits(missCost))} Cr).` : "all of it built.");
-  if (value > 0 && fullCost > 0) text += ` It adds about ${n(fmtCredits(value))} Cr/h and pays for itself in ${fmtHours(fullCost / value)}.`;
+  let text = `<span class="cost-line">Whole chain: ${n(fullN)} ${plural(fullN, "module")}, about ${n(fmtCredits(fullCost))} Cr. ` +
+    (missN ? `${n(missN)} still to build, about ${n(fmtCredits(missCost))} Cr.` : "All of it built.") + "</span>";
+  if (value > 0 && fullCost > 0) text += `<span class="cost-line">Adds about ${n(fmtCredits(value))} Cr/h, pays for itself in ${fmtHours(fullCost / value)}.</span>`;
   $("chain-cost").innerHTML = text;
 }
 
@@ -1002,7 +1011,7 @@ function renderInspector() {
       <button type="button" class="icon-btn" data-action="close" aria-label="Close details" title="Close (Esc)">${icon("x", 14)}</button>
     </div>
     <div class="inspector-built">${builtControl}</div>
-    ${id !== state.selected ? `<div class="inspector-actions"><button type="button" class="btn" data-action="goto" data-id="${id}">Plan this chain${icon("arrow-right", 13)}</button></div>` : ""}
+    ${id !== state.selected || state.view !== "planner" ? `<div class="inspector-actions"><button type="button" class="btn" data-action="goto" data-id="${id}">Plan this chain${icon("arrow-right", 13)}</button></div>` : ""}
     <dl class="stats">${stats.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>
     ${inputs}
     ${uses}
@@ -1316,6 +1325,7 @@ function handleReset() {
   state.moduleCounts.clear();
   state.empire = null;
   state.plan = {};
+  savePlan();
   saveCounts();
   saveEmpire();
   refresh();
@@ -1388,7 +1398,10 @@ function bindEvents() {
     if (action === "close") {
       state.inspected = null;
       renderInspector();
-    } else if (action === "goto") selectWare(id);
+    } else if (action === "goto") {
+      state.view = "planner";
+      selectWare(id);
+    }
     else if (action === "inc") setCount(id, getCount(id) + 1);
     else if (action === "dec") setCount(id, getCount(id) - 1);
   });
@@ -1436,8 +1449,11 @@ function bindEvents() {
     const inField = e.target instanceof HTMLInputElement;
     if (e.key === "/" && !inField && !e.ctrlKey && !e.metaKey && !e.altKey) {
       e.preventDefault();
-      els.search.focus();
-      els.search.select();
+      // the Empire view has no ware list: "/" filters stations there
+      const field = state.view === "empire" ? $("station-filter") : els.search;
+      if (state.view === "empire" && state.empireTab !== "stations") setEmpireTab("stations");
+      field.focus();
+      field.select();
     } else if (e.key === "Escape") {
       if (e.target === els.search && els.search.value) {
         els.search.value = "";

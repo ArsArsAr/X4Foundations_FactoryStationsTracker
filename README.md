@@ -13,7 +13,7 @@ X4's economy is a real dependency graph. Almost everything needs Energy Cells, m
 ## Features
 
 - **Load your save.** Pick a save file and every player-owned station is read in a few seconds: name, sector, production modules, the race recipe each module runs, its real efficiency (sunlight and workforce included), and the station's workforce. The file is read on your computer and never uploaded.
-- **Needs attention.** One list of what is going wrong right now: stalled modules and the inputs they wait for, stock that runs out within a few hours, storage that is nearly full, and stations short of workers (with what full staff would add). Click an entry to jump to the station.
+- **Needs attention.** What is going wrong right now, grouped by cause: a mining shortfall with the stations it stalls, low stock, nearly full storage, stations short of workers (with what full staff would add after feeding them). Open a cause to see its stations and jump to one.
 - **Mining coverage.** From the trade log in your save (roughly the last game day), how much of each ore, gas and ice your stations use, how much your miners actually delivered, what you bought from NPCs, how many modules are stalled for it, and about how many more miners would close the gap.
 - **Bought and sold at the same time.** Wares your empire sells to NPCs while also buying them back from NPCs, at the real prices in the log, and what supplying your own stations first would keep.
 - **What your market wants.** Wares NPC stations in your universe want more of than anyone has for sale, ranked by what one module would earn at local prices, with the inputs you do not make yet and the payback time.
@@ -32,13 +32,15 @@ X4's economy is a real dependency graph. Almost everything needs Energy Cells, m
 
 1. Download or clone this repository.
 2. Double-click `index.html`.
-3. Click **Load save** and pick your newest save. On Windows saves live in `Documents\Egosoft\X4\<number>\save`, for example `quicksave.xml.gz`. On Linux they are in `~/.config/EgoSoft/X4/<number>/save`.
+3. Click **Load save** and pick your newest save, or choose **Use my save folder** once (Chrome and Edge) so that later loads always take the newest save in one click. On Windows saves live in `Documents\Egosoft\X4\<number>\save`, for example `quicksave.xml.gz`. On Linux they are in `~/.config/EgoSoft/X4/<number>/save`.
 
 ### Using it
 
 - **Empire** (top bar) has five tabs. **Overview**: level, earnings, what needs attention, earnings over time. **Stations**: every station; open one to see its detail and use the plus and minus buttons to plan changes. **Supply**: mining coverage and wares you buy and sell at the same time. **Market**: what NPCs are short of, and your prices against theirs. **Rewards**: levels and achievements.
 - **Planner**: find a ware in the left list (press `/` to search), click its name, and set a target. Each node shows the hourly rate needed and the modules needed versus built.
-- **Click any node or ware** for full details (`Esc` closes them).
+- **Click any node or ware** for full details (`Esc` closes them). From the details panel, **Plan this chain** opens it in the Planner.
+- **Keys:** `/` searches wares (or filters stations in the Empire view), `1` to `5` switch Empire tabs.
+- **Stations** can be sorted by any column and filtered by name, sector or ware. Hover a dotted column title for what it means. The what-if plan is kept until you clear it or load a new save.
 - **My network** (bottom): supply and demand across everything you have built.
 - Load a newer save whenever you have played more. Built counts you change by hand afterwards are kept on top of the save until the next load.
 
@@ -96,15 +98,14 @@ No build tooling for the app. It is vanilla HTML/CSS/JS, kept that way on purpos
 
 Tier 0 is not the same thing as "mined". Energy Cells is tier 0 (a Solar Power Plant needs no material inputs) but is a real built module with a sunlight-scaled rate. The UI uses `isMined`, not `tier`, to decide whether a ware gets a plain "I have a source" tick or a module count.
 
-**Saved data** lives in `localStorage`: `x4-factories-planner:module-counts` (built modules), `x4-factories-planner:empire` (stations and market summary from the last save), `x4-factories-planner:history` (earnings per loaded save), `x4-factories-planner:progress` (highest level and achievements earned) and `x4-factories-planner:ui` (open chain, target, view, chain options). If storage is unavailable the app still works, it just does not remember.
+**Saved data** lives in `localStorage`: `x4-factories-planner:module-counts` (built modules), `x4-factories-planner:empire` (stations and market summary from the last save), `x4-factories-planner:history` (earnings per loaded save), `x4-factories-planner:progress` (highest level and achievements earned), `x4-factories-planner:plan` (the what-if plan) and `x4-factories-planner:ui` (open chain, target, view, chain options). The remembered save folder is kept in IndexedDB. If storage is unavailable the app still works, it just does not remember.
 
-**Caching note**: if you edit the app's files and a reload does not pick up the change, bump the `?v=24` query string on the `<link>`/`<script>` tags in `index.html`.
+**Caching note**: if you edit the app's files and a reload does not pick up the change, bump the `?v=25` query string on the `<link>`/`<script>` tags in `index.html`.
 
 ## Known limitations
 
 - **Prices are a snapshot.** The price check and own-price earnings use the offers in the save at the moment it was written. Stations on automatic pricing move their prices with their stock.
 - **Supply is measured empire-wide.** Most goods travel through your own ships, and X4's trade log cannot say which station a ship's NPC purchase finally went to, so mining coverage and the bought-and-sold list compare your whole empire with the outside world rather than one station at a time. "Needed" assumes every module runs.
-- **The what-if plan is not saved.** It lasts until you reload the page or load a save.
 - **Scrap recyclers are not modelled.** They have no fixed recipe, so a save import skips them and says so.
 - **Earnings are estimates** at average prices (see above). Hand-entered modules count at 100% efficiency; modules from a save use the efficiency the game recorded.
 - **Built for a desktop window.** Narrow windows still work, but it is not a phone layout.

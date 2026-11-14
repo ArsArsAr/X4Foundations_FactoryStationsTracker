@@ -12,6 +12,7 @@
 --------------------------------------------------------------------- */
 
 const PROGRESS_KEY = "x4-factories-planner:progress";
+const PLAN_KEY = "x4-factories-planner:plan";
 const HISTORY_KEY = "x4-factories-planner:history";
 
 const METHOD_LABEL = {
@@ -73,6 +74,30 @@ function badgeHTML(index, size) {
 
 function factionLabel(id) {
   return FACTION_LABEL[id] || (id ? id.charAt(0).toUpperCase() + id.slice(1) : "Unknown");
+}
+
+// a column label with its definition on hover
+const TERMS = {
+  average: "Value added per hour at the game's average prices: what the station makes, minus its inputs and what its workers eat.",
+  own: "Value added per hour at this station's own trade prices from the save. Stations that only feed your other stations can look low here.",
+  workforce: "Workers living at the station, against the workers its modules need for full speed.",
+  modules: "Production modules built at the station.",
+  efficiency: "Output compared with the recipe, including sunlight and the workforce bonus.",
+  makes: "Units made per hour by this group of modules.",
+  value: "Output value minus input cost per hour, at average prices.",
+  needed: "What your stations use per hour with every module running, plus what their workers eat.",
+  miners: "What your mining ships delivered per hour, from the trade log in the save.",
+  bought: "Bought from NPC stations per hour, and the average price paid.",
+  covered: "Your miners plus purchases, as a share of what is needed.",
+  wanted: "Units NPC stations are asking to buy right now, and the typical price they pay.",
+  forsale: "Units NPC stations are offering for sale right now.",
+  onemodule: "What one module adds per hour at local prices: output at the typical NPC buying price, minus inputs at the typical NPC selling price.",
+  payback: "Build cost of one module divided by what it adds per hour.",
+  yourprice: "Your stations' trade offer for this ware, averaged over the stations that trade it.",
+};
+
+function term(label, key) {
+  return `<span class="term" title="${escapeHTML(TERMS[key])}">${label}</span>`;
 }
 
 function fmtCr(n) {
@@ -213,7 +238,10 @@ function workforceGain(st) {
     const made = unitFlows(m).made;
     gain += made * ((1 + r.work) / (1 + r.work * ratio) - 1) * w.price.avg;
   }
-  return gain;
+  // the extra workers have to be fed (employed workers, standard diet)
+  const diet = (WORKFORCE.default || {}).busy || [];
+  const perWorker = diet.reduce((s, i) => s + (W[i.wareID] ? i.amount * W[i.wareID].price.avg : 0), 0);
+  return Math.max(0, gain - (st.workforceNeed - Math.min(st.workforce, st.workforceNeed)) * perWorker);
 }
 
 /* ---------------------------------------------------------------------
@@ -233,7 +261,7 @@ function attentionIssues() {
       const short = (m.short || []).filter((id) => W[id]);
       short.forEach((id) => stalledWares.add(id));
       issues.push({
-        sev: 3, st, kind: "stalled",
+        sev: 3, st, kind: "stalled", short, stalled: m.stalled, module: m.ware,
         title: `${m.stalled} of ${m.count} ${W[m.ware].label} ${plural(m.count, "module")} stalled`,
         sub: short.length ? `Waiting for ${short.map((id) => W[id].label).join(", ")}` : "Waiting for inputs",
         weight: m.stalled * Math.max(0, moduleValue(m.ware, m.method, m.efficiency)),
@@ -244,7 +272,7 @@ function attentionIssues() {
       for (const r of stationRunway(st)) {
         if (r.hours >= RUNWAY_WARN_HOURS || stalledWares.has(r.ware)) continue;
         issues.push({
-          sev: 2, st, kind: "runway",
+          sev: 2, st, kind: "runway", ware: r.ware, hours: r.hours,
           title: r.stock ? `${W[r.ware].label} runs out in ${fmtHours(r.hours)}` : `No ${W[r.ware].label} in stock`,
           sub: `Uses ${fmtRate(r.perHour)} per hour, ${Math.round(r.stock).toLocaleString("en-US")} in stock`,
           weight: r.perHour * W[r.ware].price.avg,
@@ -267,7 +295,7 @@ function attentionIssues() {
         ? `Housing fits ${st.habitatCapacity.toLocaleString("en-US")}, so add habitats. `
         : "";
       issues.push({
-        sev: 1, st, kind: "workforce",
+        sev: 1, st, kind: "workforce", gain,
         title: `Workforce at ${fmtPercent(st.workforce / st.workforceNeed)}`,
         sub: `${st.workforce.toLocaleString("en-US")} of ${st.workforceNeed.toLocaleString("en-US")} workers. ${housing}${gain > 0 ? `Full staff adds about ${fmtCr(gain)} per hour.` : ""}`.trim(),
         weight: gain,
@@ -279,7 +307,7 @@ function attentionIssues() {
     for (const r of miningRows()) {
       if (r.cover >= 0.95 || !r.need) continue;
       issues.push({
-        sev: r.stalled ? 3 : 2, st: null, kind: "mining", tab: "supply",
+        sev: r.stalled ? 3 : 2, st: null, kind: "mining", tab: "supply", ware: r.ware,
         title: `${W[r.ware].label} supply covers ${fmtPercent(r.cover)} of what you use`,
         sub: `${r.stalled ? `${r.stalled} ${plural(r.stalled, "module")} stalled waiting for it. ` : ""}${r.more ? `About ${r.more} more ${plural(r.more, "miner")} would close the gap.` : ""}`.trim(),
         weight: 1e12 * (1 - r.cover), // ahead of single stalls: this is usually their cause
@@ -288,7 +316,7 @@ function attentionIssues() {
     for (const r of internalRows()) {
       if (r.gain < 50e3) continue;
       issues.push({
-        sev: 1, st: null, kind: "internal", tab: "supply",
+        sev: 1, st: null, kind: "internal", tab: "supply", ware: r.ware, gain: r.gain,
         title: `You sell ${W[r.ware].label} to NPCs and buy it back`,
         sub: `Supplying your own stations first keeps about ${fmtCr(r.gain)} per hour.`,
         weight: r.gain,
@@ -301,6 +329,78 @@ function attentionIssues() {
 
 const ISSUE_ICON = { stalled: "warning", runway: "clock", storage: "warning", workforce: "trend-up", mining: "warning", internal: "trend-up" };
 
+const SEV_LABEL = { 3: "Urgent", 2: "Soon", 1: "Worth a look" };
+
+// One entry per cause instead of one per symptom: a supply shortage takes
+// in the stalls it causes, low stock and full storage group by ware.
+function attentionGroups() {
+  const issues = attentionIssues();
+  const groups = new Map();
+  const add = (key, base) => {
+    if (!groups.has(key)) groups.set(key, { key, items: [], weight: 0, sub: "", ...base });
+    return groups.get(key);
+  };
+  for (const i of issues) {
+    if (i.kind !== "mining") continue;
+    const g = add(`ware:${i.ware}`, { sev: i.sev, kind: "mining", ware: i.ware, title: i.title, sub: i.sub, tab: "supply" });
+    g.weight += i.weight;
+  }
+  for (const i of issues) {
+    if (i.kind === "stalled") {
+      const cause = i.short.find((w) => groups.has(`ware:${w}`)) || i.short[0] || "inputs";
+      const g = add(`ware:${cause}`, { sev: 3, kind: "stalled", ware: cause });
+      g.items.push(i);
+      g.weight += i.weight;
+      g.sev = Math.max(g.sev, 3);
+    } else if (i.kind === "runway") {
+      // low stock of a ware that already has a cause above belongs to that cause
+      const g = groups.get(`ware:${i.ware}`) || add("runway", { sev: 2, kind: "runway" });
+      g.items.push(i);
+    } else if (i.kind === "storage") {
+      add("storage", { sev: 2, kind: "storage" }).items.push(i);
+    } else if (i.kind === "workforce") {
+      add("workforce", { sev: 1, kind: "workforce" }).items.push(i);
+    } else if (i.kind === "internal") {
+      add("internal", { sev: 1, kind: "internal", tab: "supply" }).items.push(i);
+    }
+  }
+
+  for (const g of groups.values()) {
+    const stations = new Set(g.items.filter((i) => i.st).map((i) => i.st.id)).size;
+    const stalledStations = new Set(g.items.filter((i) => i.kind === "stalled").map((i) => i.st.id)).size;
+    const stalledAt = `${stalledStations} ${plural(stalledStations, "station")}`;
+    const at = `${stations} ${plural(stations, "station")}`;
+    const label = W[g.ware] ? W[g.ware].label : "inputs";
+    if (g.kind === "mining") {
+      if (stalledStations) g.sub = g.sub.replace(/stalled waiting for it\./, `stalled at ${stalledAt}.`);
+    } else if (g.kind === "stalled") {
+      const n = g.items.reduce((s, i) => s + (i.stalled || 0), 0);
+      g.title = `Short of ${label}`;
+      g.sub = `${n} ${plural(n, "module")} stalled at ${stalledAt}.`;
+    } else if (g.kind === "runway") {
+      const wares = new Set(g.items.map((i) => i.ware));
+      g.title = `Low stock of ${wares.size} ${plural(wares.size, "ware")} at ${at}`;
+      g.sub = `Stock that runs out within ${RUNWAY_WARN_HOURS} hours: ${[...wares].slice(0, 3).map((w) => W[w].label).join(", ")}${wares.size > 3 ? " and more" : ""}.`;
+      g.weight = g.items.reduce((s, i) => s + i.weight, 0);
+      g.items.sort((a, b) => a.hours - b.hours);
+    } else if (g.kind === "storage") {
+      g.title = `Storage nearly full at ${at}`;
+      g.sub = "Production stops when storage is full. Sell more, or add storage.";
+    } else if (g.kind === "workforce") {
+      const gain = g.items.reduce((s, i) => s + (i.gain || 0), 0);
+      g.title = `${at} short of workers`;
+      g.sub = gain > 0 ? `Full staff would add about ${fmtCr(gain)} per hour.` : "Add habitats so the modules get their workforce bonus.";
+      g.weight = gain;
+    } else if (g.kind === "internal") {
+      const gain = g.items.reduce((s, i) => s + i.gain, 0);
+      g.title = `${g.items.length} ${plural(g.items.length, "ware")} sold to NPCs and bought back`;
+      g.sub = `Supplying your own stations first keeps about ${fmtCr(gain)} per hour.`;
+      g.weight = gain;
+    }
+  }
+  return [...groups.values()].sort((a, b) => b.sev - a.sev || b.weight - a.weight);
+}
+
 function renderAttention() {
   const box = $("attention-list");
   const e = state.empire;
@@ -312,23 +412,35 @@ function renderAttention() {
     box.innerHTML = `<p class="quiet-note">Load your save again to check stock, storage and workers. This empire was read by an older version.</p>`;
     return;
   }
-  const issues = attentionIssues();
-  if (!issues.length) {
+  const groups = attentionGroups();
+  if (!groups.length) {
     box.innerHTML = `<p class="quiet-note all-good">${icon("check", 13)}Nothing needs attention. Every module has what it needs.</p>`;
     return;
   }
-  const shown = state.attentionAll ? issues : issues.slice(0, 7);
-  box.innerHTML = `<ul class="issues">${shown.map((i) => `
-    <li>
-      <button type="button" class="issue sev-${i.sev}" ${i.st ? `data-action="open-station" data-id="${escapeHTML(i.st.id)}"` : `data-action="open-tab" data-id="${i.tab}"`}>
-        <span class="issue-icon">${icon(ISSUE_ICON[i.kind], 14)}</span>
-        <span class="issue-text">
-          <span class="issue-title">${escapeHTML(i.title)}</span>
-          <span class="issue-sub">${i.st ? escapeHTML(stationLabel(i.st)) + ". " : ""}${escapeHTML(i.sub)}</span>
-        </span>
-      </button>
-    </li>`).join("")}</ul>
-    ${issues.length > 7 ? `<button type="button" class="btn is-small is-ghost" data-action="toggle-attention">${state.attentionAll ? "Show fewer" : `Show all ${issues.length}`}</button>` : ""}`;
+  const LIMIT = 5;
+  const shown = state.attentionAll ? groups : groups.slice(0, LIMIT);
+  const open = state.openGroups || new Set();
+  const head = (g) => `
+    <span class="issue-icon">${icon(ISSUE_ICON[g.kind], 14)}</span>
+    <span class="issue-text">
+      <span class="issue-title"><span class="sr-only">${SEV_LABEL[g.sev]}: </span>${escapeHTML(g.title)}</span>
+      <span class="issue-sub">${escapeHTML(g.sub)}</span>
+    </span>`;
+  const item = (i) => i.st
+    ? `<li><button type="button" class="issue-item" data-action="open-station" data-id="${escapeHTML(i.st.id)}"><span class="issue-item-st">${escapeHTML(stationLabel(i.st))}</span><span>${escapeHTML(i.title)}</span></button></li>`
+    : `<li><button type="button" class="issue-item" data-action="open-tab" data-id="supply"><span class="issue-item-st">${escapeHTML(i.title.replace(/^You sell /, "").replace(/ to NPCs and buy it back$/, ""))}</span><span>${escapeHTML(i.sub)}</span></button></li>`;
+  box.innerHTML = `<ul class="issues">${shown.map((g) => {
+    if (!g.items.length) {
+      return `<li><button type="button" class="issue sev-${g.sev}" data-action="open-tab" data-id="${g.tab}">${head(g)}<span class="issue-go">${icon("arrow-right", 12)}</span></button></li>`;
+    }
+    return `<li><details class="issue-group" data-key="${escapeHTML(g.key)}"${open.has(g.key) ? " open" : ""}>
+      <summary class="issue sev-${g.sev}">${head(g)}<span class="issue-count num" title="${g.items.length} ${g.items.length === 1 ? "entry" : "entries"}">${g.items.length}</span></summary>
+      <ul class="issue-items">${g.items.map(item).join("")}
+        ${g.tab ? `<li><button type="button" class="issue-item is-link" data-action="open-tab" data-id="${g.tab}">Open the Supply tab${icon("arrow-right", 11)}</button></li>` : ""}
+      </ul>
+    </details></li>`;
+  }).join("")}</ul>
+    ${groups.length > LIMIT ? `<button type="button" class="btn is-small is-ghost" data-action="toggle-attention">${state.attentionAll ? "Show fewer" : `Show ${groups.length - LIMIT} more`}</button>` : ""}`;
 }
 
 /* ---------------------------------------------------------------------
@@ -353,9 +465,11 @@ function renderView() {
   document.querySelectorAll(".view-switch button").forEach((b) => {
     b.setAttribute("aria-pressed", String(b.dataset.view === state.view));
   });
-  document.querySelectorAll("#empire-view .tabs button").forEach((b) => {
+  document.querySelectorAll("#empire-view .tabs button[data-tab]").forEach((b) => {
     b.setAttribute("aria-pressed", String(b.dataset.tab === state.empireTab));
   });
+  $("app").dataset.view = state.view;
+  renderSaveAge();
   document.querySelectorAll("#empire-view .tab-panel").forEach((p) => {
     p.hidden = p.dataset.panel !== state.empireTab;
   });
@@ -424,6 +538,126 @@ function renderOverview() {
   renderHistory();
 }
 
+// how old the loaded save is; a stale save means stale numbers everywhere
+function renderSaveAge() {
+  const el = $("save-age");
+  const e = state.empire;
+  if (!e || !e.savedAt) {
+    el.hidden = true;
+    return;
+  }
+  const days = (Date.now() / 1000 - e.savedAt) / 86400;
+  const when = new Date(e.savedAt * 1000).toLocaleDateString(undefined, { day: "numeric", month: "short" });
+  const age = days < 1 / 24 ? "just now" : days < 1 ? `${Math.max(1, Math.round(days * 24))} h ago` : `${Math.round(days)} ${plural(Math.round(days), "day")} ago`;
+  el.hidden = false;
+  el.classList.toggle("is-stale", days > 1);
+  el.innerHTML = days > 1
+    ? `${icon("warning", 12)}<span>Save from ${when}, ${age}.</span><button type="button" class="link-btn" data-action="load-save">Load a newer one</button>`
+    : `<span>Save from ${when}, ${age}</span>`;
+}
+
+/* One-click reloads: remember the save folder (where the browser allows it)
+   and load its newest file. The folder handle lives in IndexedDB. */
+const canPickFolder = typeof window.showDirectoryPicker === "function";
+let saveFolder = null;
+
+function idb(mode, fn) {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open("x4-factories-planner", 1);
+    req.onupgradeneeded = () => req.result.createObjectStore("kv");
+    req.onerror = () => reject(req.error);
+    req.onsuccess = () => {
+      const tx = req.result.transaction("kv", mode);
+      const r = fn(tx.objectStore("kv"));
+      tx.oncomplete = () => resolve(r && r.result);
+      tx.onerror = () => reject(tx.error);
+    };
+  });
+}
+
+async function restoreSaveFolder() {
+  if (!canPickFolder) return;
+  try {
+    saveFolder = (await idb("readonly", (s) => s.get("saveFolder"))) || null;
+  } catch (e) {
+    saveFolder = null;
+  }
+  updateLoadButton();
+  if (state.view === "empire") renderEmpireSource();
+}
+
+function updateLoadButton() {
+  els.loadSave.title = saveFolder
+    ? `Load the newest save from your "${saveFolder.name}" folder`
+    : "Read your stations and modules from an X4 save file";
+}
+
+async function chooseSaveFolder() {
+  try {
+    const handle = await window.showDirectoryPicker({ id: "x4-saves", mode: "read" });
+    saveFolder = handle;
+    try {
+      await idb("readwrite", (s) => s.put(handle, "saveFolder"));
+    } catch (e) {
+      /* works for this session only */
+    }
+    updateLoadButton();
+    await loadNewestSave();
+  } catch (e) {
+    if (e && e.name !== "AbortError") setStatus("Could not open that folder. Pick a save file instead.");
+  }
+}
+
+async function loadNewestSave() {
+  if (!saveFolder) {
+    els.saveFile.click();
+    return;
+  }
+  try {
+    let perm = await saveFolder.queryPermission({ mode: "read" });
+    if (perm !== "granted") perm = await saveFolder.requestPermission({ mode: "read" });
+    if (perm !== "granted") {
+      setStatus("Reading the save folder was not allowed. Pick a file instead.");
+      return;
+    }
+    let newest = null;
+    for await (const [name, handle] of saveFolder.entries()) {
+      if (handle.kind !== "file" || !/\.xml(\.gz)?$/i.test(name)) continue;
+      const file = await handle.getFile();
+      if (!newest || file.lastModified > newest.lastModified) newest = file;
+    }
+    if (!newest) {
+      setStatus(`No save files in "${saveFolder.name}". Choose the folder that holds quicksave.xml.gz.`);
+      return;
+    }
+    importSave(newest);
+  } catch (e) {
+    console.error(e);
+    setStatus("Could not read the save folder. Pick a file instead.");
+  }
+}
+
+async function forgetSaveFolder() {
+  saveFolder = null;
+  try {
+    await idb("readwrite", (s) => s.delete("saveFolder"));
+  } catch (e) {
+    /* nothing stored */
+  }
+  updateLoadButton();
+  renderEmpireSource();
+}
+
+function loadButtons(primary) {
+  const cls = primary ? "btn is-primary" : "btn";
+  if (saveFolder) {
+    return `<button type="button" class="${cls}" data-action="load-newest" title="From your &quot;${escapeHTML(saveFolder.name)}&quot; folder">${icon("folder-open")}Load newest save</button>
+      <button type="button" class="btn" data-action="load-file">Pick a file</button>`;
+  }
+  return `<button type="button" class="${cls}" data-action="load-file">${icon("folder-open")}${primary ? "Load save" : "Load newer save"}</button>
+    ${canPickFolder ? `<button type="button" class="btn" data-action="choose-folder" title="Remember your save folder, then load its newest save with one click">Use my save folder</button>` : ""}`;
+}
+
 function renderEmpireSource() {
   if (state.importing) {
     const pct = Math.round(state.importing.progress * 100);
@@ -442,9 +676,9 @@ function renderEmpireSource() {
       <div class="source-text">
         <h2>Load your empire from a save</h2>
         <p>X4 keeps saves in <code>Documents\\Egosoft\\X4\\&lt;number&gt;\\save</code>. Pick the newest one, for example <code>quicksave.xml.gz</code>. It is read on this computer and never uploaded.</p>
-        <p class="quiet-note">Your stations, modules, race recipes, sunlight, workforce, stock and trade prices come straight from the save. Built counts you entered by hand are replaced.</p>
+        <p class="quiet-note">Your stations, modules, race recipes, sunlight, workforce, stock and trade prices come straight from the save. Built counts you entered by hand are replaced.${canPickFolder ? " With your save folder chosen once, later loads take one click." : ""}</p>
       </div>
-      <button type="button" class="btn is-primary" data-action="load-save">${icon("folder-open")}Load save</button>`;
+      <div class="source-actions">${loadButtons(true)}</div>`;
     return;
   }
 
@@ -454,9 +688,10 @@ function renderEmpireSource() {
     <div class="source-text">
       <h2>${e.saveName ? `From "${escapeHTML(e.saveName)}"` : "From your save"}</h2>
       <p class="quiet-note">Saved ${when}. ${e.stations.length} ${plural(e.stations.length, "station")}, ${total} production ${plural(total, "module")}${e.skipped ? `, ${e.skipped} other ${plural(e.skipped, "module")} skipped` : ""}.</p>
+      ${saveFolder ? `<p class="quiet-note">Save folder: <strong>${escapeHTML(saveFolder.name)}</strong>. <button type="button" class="link-btn" data-action="forget-folder">Forget folder</button></p>` : ""}
     </div>
     <div class="source-actions">
-      <button type="button" class="btn" data-action="load-save">${icon("folder-open")}Load newer save</button>
+      ${loadButtons(false)}
       <button type="button" class="btn" data-action="forget-save" title="Keep your built counts, drop the station details">Forget save</button>
     </div>`;
 }
@@ -559,7 +794,12 @@ function changePlan(stId, key, step) {
   else delete plan[key];
   if (Object.keys(plan).length) state.plan[stId] = plan;
   else delete state.plan[stId];
+  savePlan();
   refresh();
+}
+
+function savePlan() {
+  writeJSON(PLAN_KEY, state.plan);
 }
 
 function empireNetFrom(modulesOf) {
@@ -635,13 +875,33 @@ function renderStationsTab() {
   const issueCount = new Map();
   for (const i of attentionIssues()) if (i.st) issueCount.set(i.st.id, (issueCount.get(i.st.id) || 0) + 1);
 
+  const sort = state.stationSort || { key: "avg", dir: -1 };
+  const q = (state.stationFilter || "").trim().toLowerCase();
+  const sortValue = {
+    name: (r) => stationLabel(r.st).toLowerCase(),
+    sector: (r) => r.st.sectorName.toLowerCase(),
+    modules: (r) => r.modules,
+    workforce: (r) => r.st.workforce || 0,
+    avg: (r) => r.profit,
+    own: (r) => (r.own === null ? -Infinity : r.own),
+    issues: (r) => issueCount.get(r.st.id) || 0,
+  }[sort.key];
   const rows = e.stations
     .map((st) => ({ st, profit: stationValue(st), own: hasOwn ? stationValue(st, "own") : null, modules: moduleTotal(st) }))
-    .sort((a, b) => b.profit - a.profit || b.modules - a.modules);
+    .filter((r) => !q || [stationLabel(r.st), r.st.sectorName, ...r.st.modules.map((m) => W[m.ware].label)].some((t) => t.toLowerCase().includes(q)))
+    .sort((a, b) => {
+      const x = sortValue(a), y = sortValue(b);
+      return (x < y ? -1 : x > y ? 1 : 0) * sort.dir || b.profit - a.profit;
+    });
 
-  els.stationsNote.textContent = "Value added per hour. Average: output and inputs at average prices. Own: at this station's trade prices. Use the plus and minus on a module to plan changes.";
+  const head = (key, label) => {
+    const active = sort.key === key;
+    return `<button type="button" class="sort-btn${active ? " is-active" : ""}${active && sort.dir > 0 ? " is-asc" : ""}" data-action="sort-stations" data-id="${key}" aria-label="Sort by ${key}${active ? (sort.dir > 0 ? ", ascending" : ", descending") : ""}">${label}${active ? icon("caret-down", 10) : ""}</button>`;
+  };
+  els.stationsNote.textContent = `${rows.length === e.stations.length ? `${rows.length} ${plural(rows.length, "station")}` : `${rows.length} of ${e.stations.length} stations`}. Click a column to sort, a station to open it, and the plus and minus on a module to plan changes.`;
   els.stationList.innerHTML = `
-    <div class="st-row st-head"><span></span><span>Station</span><span>Sector</span><span>Modules</span><span>Workforce</span><span>Average</span><span>Own prices</span></div>
+    <div class="st-row st-head"><span></span><span>${head("name", "Station")}</span><span>${head("sector", "Sector")}</span><span>${head("modules", term("Modules", "modules"))}</span><span>${head("workforce", term("Workforce", "workforce"))}</span><span>${head("avg", term("Average", "average"))}</span><span>${head("own", term("Own prices", "own"))}</span></div>
+    ${rows.length ? "" : `<p class="quiet-note st-empty">No station matches "${escapeHTML(state.stationFilter.trim())}".</p>`}
     ${rows.map(({ st, profit, own, modules }) => {
       const open = state.openStation === st.id;
       const issues = issueCount.get(st.id) || 0;
@@ -724,7 +984,7 @@ function stationDetail(st) {
   return `
     <div class="st-detail">
       <div class="st-modules">
-        <div class="mod-row mod-head"><span>Module</span><span>Count</span><span>Efficiency</span><span>Makes</span><span>Value</span></div>
+        <div class="mod-row mod-head"><span>Module</span><span>Count</span><span>${term("Efficiency", "efficiency")}</span><span>${term("Makes", "makes")}</span><span>${term("Value", "value")}</span></div>
         ${moduleRows}
         <label class="select-field plan-add"><span>Plan a new module</span>
           <select data-action="plan-add" data-id="${escapeHTML(st.id)}"><option value="">Choose a ware</option>${addable}</select>
@@ -865,7 +1125,7 @@ function renderPrices() {
       : `<span class="num dim">none</span>`;
     return `<section class="price-section">
       <h3>${title}</h3>
-      <div class="price-row price-head"><span>Ware</span><span>Your price</span><span>${side === "sell" ? "Cheapest NPC seller" : "Highest NPC buyer"}</span><span>${side === "sell" ? "Highest NPC buyer" : "Cheapest NPC seller"}</span><span class="price-advice">Suggestion</span><span>Gain per hour</span></div>
+      <div class="price-row price-head"><span>Ware</span><span>${term("Your price", "yourprice")}</span><span>${side === "sell" ? "Cheapest NPC seller" : "Highest NPC buyer"}</span><span>${side === "sell" ? "Highest NPC buyer" : "Cheapest NPC seller"}</span><span class="price-advice">Suggestion</span><span>Gain per hour</span></div>
       ${list.map((r) => {
         const best = r.rivals;
         const other = r.partners;
@@ -970,10 +1230,15 @@ function miningRows() {
   const flows = e.flows.wares;
   const net = empireNeed();
   const stalledFor = new Map();
+  const stalledAt = new Map();
   for (const st of e.stations) {
     for (const m of st.modules) {
       if (!m.stalled) continue;
-      for (const w of m.short || []) stalledFor.set(w, (stalledFor.get(w) || 0) + m.stalled);
+      for (const w of m.short || []) {
+        stalledFor.set(w, (stalledFor.get(w) || 0) + m.stalled);
+        if (!stalledAt.has(w)) stalledAt.set(w, new Set());
+        stalledAt.get(w).add(st);
+      }
     }
   }
   // what one miner of the right type brings in per hour if it mined only this
@@ -990,7 +1255,7 @@ function miningRows() {
       return {
         ware: w.id, need, mined: f.mined, miners: f.miners, bought: f.bought, buyPrice: f.buyPrice,
         cover: need ? Math.min(1, (f.mined + f.bought) / need) : 1,
-        perMiner, stalled: stalledFor.get(w.id) || 0,
+        perMiner, stalled: stalledFor.get(w.id) || 0, stalledAt: [...(stalledAt.get(w.id) || [])],
         more: perMiner && gap > 0 ? Math.ceil(gap / perMiner) : 0,
         moreToStopBuying: perMiner && ownGap > 0 ? Math.ceil(ownGap / perMiner) : 0,
       };
@@ -1053,14 +1318,14 @@ function renderSupply() {
 
   const rows = miningRows();
   mining.innerHTML = rows.length
-    ? `<div class="sup-row sup-head"><span>Ware</span><span>Needed</span><span>Your miners</span><span>Bought</span><span>Covered</span><span>What to do</span></div>
+    ? `<div class="sup-row sup-head"><span>Ware</span><span>${term("Needed", "needed")}</span><span>${term("Your miners", "miners")}</span><span>${term("Bought", "bought")}</span><span>${term("Covered", "covered")}</span><span>What to do</span></div>
       ${rows.map((r) => {
         let advice;
         if (r.more) advice = `<span class="tag is-short">+${r.more}</span> About ${r.more} more ${plural(r.more, "miner")} to cover the shortfall.`;
         else if (r.moreToStopBuying && r.bought > 0) advice = `Covered, partly by buying. ${r.moreToStopBuying} more ${plural(r.moreToStopBuying, "miner")} would stop the buying.`;
         else if (r.need) advice = "Covered.";
         else advice = "Nothing uses it right now.";
-        if (r.stalled) advice += ` <span class="sup-stalled">${r.stalled} ${plural(r.stalled, "module")} stalled waiting for it.</span>`;
+        if (r.stalled) advice += ` <span class="sup-stalled">${r.stalled} ${plural(r.stalled, "module")} stalled waiting for it, at ${stationNames(r.stalledAt)}.</span>`;
         return `<div class="sup-row${r.more ? " is-short" : ""}">
           <button type="button" class="net-name" data-action="inspect" data-id="${r.ware}">${W[r.ware].label}</button>
           <span class="num">${fmtRate(r.need)}/h</span>
@@ -1138,10 +1403,10 @@ function renderOpportunities() {
   const rows = opportunityRows().slice(0, 12);
   note.textContent = "Wares NPC stations want more of than anyone has for sale right now, ranked by what one module earns at the prices in your universe: output at the typical NPC buying price, inputs at the typical NPC selling price.";
   box.innerHTML = rows.length
-    ? `<div class="opp-row opp-head"><span>Ware</span><span>NPCs want</span><span>For sale</span><span>One module</span><span>Inputs</span><span>Pays back</span></div>
+    ? `<div class="opp-row opp-head"><span>Ware</span><span>${term("NPCs want", "wanted")}</span><span>${term("For sale", "forsale")}</span><span>${term("One module", "onemodule")}</span><span>Inputs</span><span>${term("Pays back", "payback")}</span></div>
       ${rows.map((r) => `
         <div class="opp-row">
-          <span class="opp-name"><button type="button" class="net-name" data-action="plan-ware" data-id="${r.ware}">${W[r.ware].label}</button>${r.made ? `<span class="tag is-plain">you make it</span>` : ""}</span>
+          <span class="opp-name"><button type="button" class="net-name" data-action="inspect" data-id="${r.ware}">${W[r.ware].label}</button>${r.made ? `<span class="tag is-plain">you make it</span>` : ""}</span>
           <span><span class="num">${Math.round(r.wanted).toLocaleString("en-US")}</span><span class="price-sub">${r.buyers} ${plural(r.buyers, "buyer")}, about ${fmtPrice(Math.round(r.price))}</span></span>
           <span class="num dim">${Math.round(r.offered).toLocaleString("en-US")}</span>
           <span class="num is-ok">+${fmtCredits(r.value)} Cr/h</span>
@@ -1600,6 +1865,7 @@ async function importSave(file) {
     };
     state.openStation = null;
     state.plan = {};
+    savePlan();
     saveCounts();
     saveEmpire();
     recordHistory();
@@ -1638,20 +1904,48 @@ function loadEmpireExtras() {
     saveProgress();
   }
   if (!history.length && state.empire) recordHistory();
+
+  const plan = readJSON(PLAN_KEY);
+  if (plan && typeof plan === "object" && state.empire) {
+    for (const [id, changes] of Object.entries(plan)) {
+      if (stationById(id) && changes && typeof changes === "object") state.plan[id] = changes;
+    }
+  }
+  restoreSaveFolder();
 }
 
 function bindEmpireEvents() {
   document.querySelectorAll(".view-switch button").forEach((btn) => {
     btn.addEventListener("click", () => setView(btn.dataset.view));
   });
-  document.querySelectorAll("#empire-view .tabs button").forEach((btn) => {
+  document.querySelectorAll("#empire-view .tabs button[data-tab]").forEach((btn) => {
     btn.addEventListener("click", () => setEmpireTab(btn.dataset.tab));
   });
   els.rankChip.addEventListener("click", () => {
     state.view = "empire";
     setEmpireTab("overview");
   });
-  els.loadSave.addEventListener("click", () => els.saveFile.click());
+  els.loadSave.addEventListener("click", () => loadNewestSave());
+  $("station-filter").addEventListener("input", (e) => {
+    state.stationFilter = e.target.value;
+    renderStationsTab();
+  });
+  // remember which attention groups are open across re-renders ("toggle" does not bubble)
+  els.empireView.addEventListener("toggle", (e) => {
+    const d = e.target;
+    if (!d.matches || !d.matches("details.issue-group")) return;
+    state.openGroups = state.openGroups || new Set();
+    if (d.open) state.openGroups.add(d.dataset.key);
+    else state.openGroups.delete(d.dataset.key);
+  }, true);
+  // 1 to 5 switch Empire tabs
+  const TAB_KEYS = ["overview", "stations", "supply", "prices", "rewards"];
+  document.addEventListener("keydown", (e) => {
+    if (state.view !== "empire" || !$("modal").hidden || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement || e.target instanceof HTMLTextAreaElement) return;
+    const n = Number(e.key);
+    if (n >= 1 && n <= TAB_KEYS.length) setEmpireTab(TAB_KEYS[n - 1]);
+  });
   els.saveFile.addEventListener("change", () => {
     if (els.saveFile.files[0]) importSave(els.saveFile.files[0]);
     els.saveFile.value = "";
@@ -1661,11 +1955,21 @@ function bindEmpireEvents() {
     const btn = e.target.closest("[data-action]");
     if (!btn || btn.tagName === "SELECT") return;
     const { action, id } = btn.dataset;
-    if (action === "load-save") els.saveFile.click();
-    else if (action === "forget-save") {
+    if (action === "load-save") loadNewestSave();
+    else if (action === "load-file") els.saveFile.click();
+    else if (action === "load-newest") loadNewestSave();
+    else if (action === "choose-folder") chooseSaveFolder();
+    else if (action === "forget-folder") forgetSaveFolder();
+    else if (action === "sort-stations") {
+      const cur = state.stationSort || { key: "avg", dir: -1 };
+      const textual = id === "name" || id === "sector";
+      state.stationSort = cur.key === id ? { key: id, dir: -cur.dir } : { key: id, dir: textual ? 1 : -1 };
+      renderStationsTab();
+    } else if (action === "forget-save") {
       state.empire = null;
       state.openStation = null;
       state.plan = {};
+      savePlan();
       saveEmpire();
       refresh();
       setStatus("Station details dropped. Your built counts are kept.");
@@ -1684,6 +1988,7 @@ function bindEmpireEvents() {
     } else if (action === "plan") changePlan(id, btn.dataset.key, Number(btn.dataset.step));
     else if (action === "clear-plan") {
       state.plan = {};
+      savePlan();
       refresh();
     } else if (action === "share") openShareCard();
     else if (action === "inspect") inspect(id);
