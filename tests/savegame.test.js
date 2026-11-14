@@ -71,6 +71,10 @@ const SAVE = `<?xml version="1.0" encoding="UTF-8"?>
 </component>
 </component>
 </universe>
+<blueprints>
+<blueprint ware="module_gen_prod_hullparts_01"/>
+<blueprint ware="ship_arg_m_trans_container_01_a"/>
+</blueprints>
 <missions>
 <offer id="9" actor="[0x50]" name="Help Trade Operation" description="A guild job" faction="teladi" type="trade" level="easy">
 <briefing>
@@ -202,4 +206,9 @@ test("reads the mission logbook and mission stats", async () => {
   const { missions } = await scan(SAVE);
   assert.deepEqual(missions.log.map((e) => e.text), ["Mission accepted.", "Mission completed."], "only mission entries");
   assert.deepEqual(missions.stats, { missions_accepted: 16, missions_completed: 15 });
+});
+
+test("reads the player's blueprints", async () => {
+  const { blueprints } = await scan(SAVE);
+  assert.deepEqual(blueprints, ["module_gen_prod_hullparts_01", "ship_arg_m_trans_container_01_a"]);
 });

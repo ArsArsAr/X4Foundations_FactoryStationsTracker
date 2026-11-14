@@ -7,7 +7,7 @@
 <meta name="description" content="Production chain planner for X4: Foundations. See what a ware needs, track what you have built, find shortfalls.">
 <title>X4 Factories Planner</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23131619'/%3E%3Cpath d='M11 10h5v6h5M11 22h5v-6' fill='none' stroke='%2339414a' stroke-width='2'/%3E%3Crect x='5' y='7' width='7' height='6' rx='1.5' fill='%23a9b1ba'/%3E%3Crect x='5' y='19' width='7' height='6' rx='1.5' fill='%23a9b1ba'/%3E%3Crect x='20' y='12' width='8' height='8' rx='2' fill='%234fcab9'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="style.css?v=32">
+<link rel="stylesheet" href="style.css?v=35">
 </head>
 <body>
 <div id="app">
@@ -104,7 +104,8 @@
         <button type="button" data-tab="logistics" aria-pressed="false" title="Press 4">Logistics</button>
         <button type="button" data-tab="prices" aria-pressed="false" title="Press 5">Market</button>
         <button type="button" data-tab="missions" aria-pressed="false" title="Press 6">Missions</button>
-        <button type="button" data-tab="rewards" aria-pressed="false" title="Press 7">Rewards</button>
+        <button type="button" data-tab="blueprints" aria-pressed="false" title="Press 7">Blueprints</button>
+        <button type="button" data-tab="rewards" aria-pressed="false" title="Press 8">Rewards</button>
         <span class="save-age" id="save-age" hidden></span>
       </nav>
 
@@ -221,6 +222,28 @@
         <div id="missions-body"></div>
       </div>
 
+      <div class="tab-panel" data-panel="blueprints" hidden>
+        <div id="bp-summary"></div>
+        <section class="section-gap" aria-labelledby="bp-title">
+          <div class="stations-head">
+            <h2 id="bp-title">All blueprints</h2>
+          </div>
+          <div class="bp-controls" id="bp-controls">
+            <div class="segmented bp-show" id="bp-show" role="group" aria-label="Show blueprints">
+              <button type="button" data-show="missing" aria-pressed="true">Missing</button>
+              <button type="button" data-show="owned" aria-pressed="false">Owned</button>
+              <button type="button" data-show="all" aria-pressed="false">All</button>
+            </div>
+            <label class="filter-field bp-filter">
+              <span class="sr-only">Filter blueprints</span>
+              <span class="search-icon" data-icon="magnifying-glass"></span>
+              <input type="search" id="bp-filter" placeholder="Filter by name, type, DLC or faction" autocomplete="off" spellcheck="false">
+            </label>
+          </div>
+          <div id="bp-list"></div>
+        </section>
+      </div>
+
       <div class="tab-panel" data-panel="rewards" hidden>
         <section class="levels" aria-labelledby="levels-title">
           <h2 id="levels-title">Levels</h2>
@@ -284,11 +307,11 @@
   </div>
 </div>
 
-<script src="data/wares.js?v=32"></script>
-<script src="savegame.js?v=32"></script>
-<script src="badges.js?v=32"></script>
-<script src="app.js?v=32"></script>
-<script src="empire.js?v=32"></script>
+<script src="data/wares.js?v=35"></script>
+<script src="savegame.js?v=35"></script>
+<script src="badges.js?v=35"></script>
+<script src="app.js?v=35"></script>
+<script src="empire.js?v=35"></script>
 <script>init();</script>
 </body>
 </html>

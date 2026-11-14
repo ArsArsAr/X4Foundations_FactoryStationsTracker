@@ -307,6 +307,56 @@ for (pid, tid) in TEXT:
         if name:
             FACTION_TEXT["{%s,%s}" % (pid, tid)] = name
 
+# ---------------------------------------------------------------- blueprints
+# every ware a player can own a blueprint for: station modules, ships,
+# equipment and cosmetic mods. Wares tagged noplayerblueprint, noblueprint
+# or deprecated can never be owned and are left out.
+MODULE_KIND = {"prod": "Production", "stor": "Storage", "hab": "Habitation", "dock": "Docks", "pier": "Docks",
+               "conn": "Connections", "def": "Defence", "build": "Ship building", "equip": "Ship building", "proc": "Processing"}
+EQUIP_KIND = [("turret", "Turrets"), ("missilelauncher", "Turrets"), ("weapon", "Weapons"), ("shield", "Shields"),
+              ("engine", "Engines"), ("thruster", "Thrusters"), ("missile", "Missiles"), ("drone", "Drones"),
+              ("software", "Software")]
+BLUEPRINTS = []
+for wid, el in WARE_EL.items():
+    tags = set((el.get("tags") or "").split())
+    if tags & {"noplayerblueprint", "noblueprint", "deprecated"}:
+        continue
+    if "module" in tags:
+        cat, kind = "Station modules", MODULE_KIND.get((wid.split("_") + ["", "", ""])[2], "Other")
+    elif "ship" in tags:
+        cat, kind = "Ships", {"xs": "XS ships", "s": "S ships", "m": "M ships", "l": "L ships", "xl": "XL ships"}.get((wid.split("_") + ["", "", ""])[2], "Other")
+    elif "equipment" in tags:
+        kind = next((label for tag, label in EQUIP_KIND if tag in tags), "Deployables")
+        cat = "Equipment"
+    elif "equipmentmod" in tags:
+        cat, kind = "Equipment mods", {"engine": "Engine", "weapon": "Weapon", "shield": "Shield", "ship": "Ship"}.get((wid.split("_") + ["", ""])[1], "Other")
+    elif "paintmod" in tags:
+        cat, kind = "Paint jobs", "Paint"
+    elif "clothingmod" in tags:
+        cat, kind = "Clothing", "Clothing"
+    else:
+        continue
+    name = text(el.get("name"))
+    # ship names carry a translator note in brackets before the real name:
+    # "(Chthonios Sentinel)Chthonios Sentinel"
+    name = re.sub(r"^\([^()]*\)\s*(?=\S)", "", name)
+    name = re.sub(r"\s{2,}", " ", name).strip()
+    if not name:
+        continue
+    price = el.find("price")
+    comp = el.find("component")
+    makes = MODULE_MACROS.get((comp.get("ref") or "").lower(), {}).get("ware") if comp is not None else None
+    entry = {"id": wid, "name": name, "cat": cat, "kind": kind,
+             "price": int(price.get("average")) if price is not None and price.get("average") else 0,
+             "owners": sorted({o.get("faction") for o in el.findall("owner") if o.get("faction")})}
+    dlc = DLC_LABEL.get(el.get("_source"))
+    if dlc:
+        entry["dlc"] = dlc
+    if makes:
+        entry["makes"] = makes
+    BLUEPRINTS.append(entry)
+BLUEPRINTS.sort(key=lambda b: (b["cat"], b["kind"], b["name"]))
+
 # ---------------------------------------------------------------- write
 
 modules ={k: v for k, v in sorted(MODULE_MACROS.items()) if v["ware"] in wares}
@@ -318,6 +368,7 @@ payload = {
     "storage": dict(sorted(STORAGE.items())),
     "workforce": WORKFORCE,
     "factionText": FACTION_TEXT,
+    "blueprints": BLUEPRINTS,
 }
 version = re.sub(r"\s+", "", open(os.path.join(GAME, "version.dat")).read())
 gamever = f"{version[0]}.{version[1:]}" if version.isdigit() else version
@@ -335,6 +386,7 @@ with open(os.path.join(PROJECT, "data", "wares.js"), "w", encoding="utf-8", newl
     f.write("const STORAGE = " + json.dumps(payload["storage"]) + ";\n")
     f.write("const WORKFORCE = " + json.dumps(WORKFORCE) + ";\n")
     f.write("const FACTION_TEXT = " + json.dumps(FACTION_TEXT, ensure_ascii=False) + ";\n")
+    f.write("const BLUEPRINTS = " + json.dumps(BLUEPRINTS, ensure_ascii=False) + ";\n")
 
 print(f"game {gamever}: {len(wares)} wares, {len(modules)} module macros, {len(sectors)} sectors")
 print("mined:", sorted(w for w in wares if wares[w]["isMined"]))

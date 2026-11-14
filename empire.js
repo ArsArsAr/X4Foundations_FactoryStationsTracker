@@ -551,6 +551,7 @@ function renderEmpire() {
   else if (tab === "supply") renderSupply();
   else if (tab === "logistics") renderLogistics();
   else if (tab === "missions") renderMissions();
+  else if (tab === "blueprints") renderBlueprints();
   else if (tab === "prices") {
     renderOpportunities();
     renderPrices();
@@ -934,9 +935,16 @@ function renderPlanBar() {
 function renderStationsTab() {
   renderPlanBar();
   const e = state.empire;
+  $("station-filter").closest(".filter-field").hidden = !e || !e.stations.length;
   if (!e) {
     els.stationsNote.textContent = "";
     els.stationList.innerHTML = `<p class="quiet-note">Load a save to see every station you own, what it makes and roughly what it earns.</p>`;
+    return;
+  }
+
+  if (!e.stations.length) {
+    els.stationsNote.textContent = "";
+    els.stationList.innerHTML = `<p class="quiet-note">This save has no stations of yours yet. Build one, then load a newer save.</p>`;
     return;
   }
 
@@ -951,6 +959,7 @@ function renderStationsTab() {
     sector: (r) => r.st.sectorName.toLowerCase(),
     modules: (r) => r.modules,
     workforce: (r) => r.st.workforce || 0,
+    shortfall: (r) => (r.st.workforceNeed || 0) - Math.min(r.st.workforce || 0, r.st.workforceNeed || 0),
     avg: (r) => r.profit,
     own: (r) => (r.own === null ? -Infinity : r.own),
     actual: (r) => (r.actual === null ? -Infinity : r.actual),
@@ -971,7 +980,7 @@ function renderStationsTab() {
   els.stationsNote.textContent = `${rows.length === e.stations.length ? `${rows.length} ${plural(rows.length, "station")}` : `${rows.length} of ${e.stations.length} stations`}. Click a column to sort, a station to open it, and the plus and minus on a module to plan changes.`;
   els.stationList.innerHTML = `
     <div class="st-row st-head"><span></span><span>${head("name", "Station")}</span><span>${head("sector", "Sector")}</span><span>${head("modules", term("Modules", "modules"))}</span><span>${head("workforce", term("Workforce", "workforce"))}</span><span>${head("avg", term("Average", "average"))}</span><span>${head("own", term("Own prices", "own"))}</span><span>${head("actual", term("Actual", "stationactual"))}</span></div>
-    ${rows.length ? "" : `<p class="quiet-note st-empty">No station matches "${escapeHTML(state.stationFilter.trim())}".</p>`}
+    ${rows.length ? "" : `<p class="quiet-note st-empty">${e.stations.length ? `No station matches "${escapeHTML((state.stationFilter || "").trim())}".` : "This save has no stations of yours yet."}</p>`}
     ${rows.map(({ st, profit, own, actual, modules }) => {
       const open = state.openStation === st.id;
       const issues = issueCount.get(st.id) || 0;
@@ -1256,6 +1265,17 @@ function rawHaul(ship) {
 }
 
 // condensed at import: per ware, units and credits per hour
+// why a trade-log view is empty: an old import, or a game that has not traded yet
+function noLogMessage(e, what) {
+  if (e.hasTradeLog === false) return `Your save's trade log is empty, so ${what} has nothing to show yet. Trade and mine for a while, then load a newer save.`;
+  return `Load your save again to see ${what}. This empire was read by an older version that did not keep the trade log.`;
+}
+
+// a tab's later sections only make sense once its first one has data
+function showSections(panel, on) {
+  document.querySelectorAll(`.tab-panel[data-panel="${panel}"] > section.section-gap`).forEach((s) => { s.hidden = !on; });
+}
+
 function summariseFlows(result, converted) {
   const { trades, ships, info, log } = result;
   if (!trades || !trades.length) return null;
@@ -1431,11 +1451,13 @@ function renderSupply() {
     note.textContent = "";
     const msg = !e
       ? "Load a save to see how well your miners keep up and where you buy and sell the same ware."
-      : "Load your save again to see supply. This empire was read by an older version that did not keep the trade log.";
+      : noLogMessage(e, "Supply");
     mining.innerHTML = `<p class="quiet-note">${msg}</p>`;
     internal.innerHTML = "";
+    showSections("supply", false);
     return;
   }
+  showSections("supply", true);
   const f = e.flows;
   note.innerHTML = `From the trade log in your save: the last <strong class="num">${Math.round(f.hours)}</strong> game hours.
     "Needed" is what your stations use with every module running, plus what their workers eat. You have ${f.minerCount.solid} solid and ${f.minerCount.liquid} gas ${plural(f.minerCount.liquid, "miner")} mining${f.minerCount.haulSolid || f.minerCount.haulLiquid ? `, plus ${f.minerCount.haulSolid + f.minerCount.haulLiquid} mining ships set to trade, which haul ore and gas between stations and are not counted as mining` : ""}.
@@ -1847,10 +1869,14 @@ function renderLogistics() {
   const e = state.empire;
   if (!e || !e.flows || !e.flows.routes) {
     note.textContent = "";
-    box.innerHTML = `<p class="quiet-note">${e ? "Load your save again to see logistics. This empire was read by an older version that did not trace routes." : "Load a save to see your distribution hubs and what moves between your stations."}</p>`;
+    box.innerHTML = `<p class="quiet-note">${e ? noLogMessage(e, "Logistics") : "Load a save to see your distribution hubs and what moves between your stations."}</p>`;
     routesBox.innerHTML = "";
+    $("transport-list").innerHTML = "";
+    $("fleet-list").innerHTML = "";
+    showSections("logistics", false);
     return;
   }
+  showSections("logistics", true);
   const traffic = (st) => e.flows.routes.filter((r) => r.from === st.id || r.to === st.id).reduce((s, r) => s + r.perHour * W[r.ware].price.avg, 0);
   const hubs = e.stations.filter(isHub).sort((a, b) => traffic(b) - traffic(a));
   note.innerHTML = `A distribution hub is a station that stores and passes on wares rather than making them. Routes come from following each of your ships in the trade log, from where it loaded to where it delivered, over the last <strong class="num">${Math.round(e.flows.hours)}</strong> game hours.`;
@@ -2340,7 +2366,7 @@ function actionPlan() {
       impact: staffGain,
       title: `Add habitats at ${shortStaffed.length} ${plural(shortStaffed.length, "station")}`,
       why: "A full workforce speeds up production; this is after feeding the extra workers.",
-      tab: "stations", sort: "workforce", label: "Stations",
+      tab: "stations", sort: "shortfall", label: "Stations",
     });
   }
 
@@ -2428,7 +2454,7 @@ const palette = { items: [], results: [], active: 0, returnFocus: null };
 
 function paletteItems() {
   const items = [];
-  const tabs = [["overview", "Overview"], ["stations", "Stations"], ["supply", "Supply"], ["logistics", "Logistics"], ["prices", "Market"], ["missions", "Missions"], ["rewards", "Rewards"]];
+  const tabs = [["overview", "Overview"], ["stations", "Stations"], ["supply", "Supply"], ["logistics", "Logistics"], ["prices", "Market"], ["missions", "Missions"], ["blueprints", "Blueprints"], ["rewards", "Rewards"]];
   items.push({ kind: "View", label: "Planner", sub: "production chains", run: () => setView("planner") });
   for (const [id, label] of tabs) {
     items.push({ kind: "Tab", label, sub: "Empire", run: () => { state.view = "empire"; setEmpireTab(id); } });
@@ -2443,6 +2469,16 @@ function paletteItems() {
     }
     for (const m of (e.missions && e.missions.active) || []) {
       items.push({ kind: "Mission", label: m.name, sub: missionType(m.type), run: () => openMission(m.id) });
+    }
+    const owned = ownedBlueprints();
+    if (owned) {
+      for (const b of BLUEPRINTS) {
+        if (b.cat === "Paint jobs" || b.cat === "Clothing") continue;
+        items.push({
+          kind: "Blueprint", label: b.name, sub: `${owned.has(b.id) ? "owned" : "missing"}, ${b.kind === b.cat ? b.cat : b.kind}`,
+          run: () => { state.view = "empire"; state.bpShow = "all"; state.bpCat = ""; state.bpFilter = b.name; $("bp-filter").value = b.name; setEmpireTab("blueprints"); },
+        });
+      }
     }
     for (const s of (e.flows && e.flows.fleet) || []) {
       items.push({
@@ -2476,7 +2512,7 @@ function searchPalette(q) {
     if ((it.sub || "").toLowerCase().includes(query)) return 1;
     return 0;
   };
-  const ORDER = { View: 0, Tab: 1, Station: 2, Ware: 3, Mission: 4, Ship: 5 };
+  const ORDER = { View: 0, Tab: 1, Station: 2, Ware: 3, Mission: 4, Ship: 5, Blueprint: 6 };
   return palette.items
     .map((it) => ({ it, s: score(it) }))
     .filter((x) => x.s > 0)
@@ -2578,6 +2614,138 @@ function bindPalette() {
 }
 
 /* ---------------------------------------------------------------------
+   Blueprints: what you own and what you are missing, from the game's
+   full list of player blueprints, with where to buy the missing ones.
+--------------------------------------------------------------------- */
+
+const BP_CATEGORIES = ["Station modules", "Ships", "Equipment", "Equipment mods", "Paint jobs", "Clothing"];
+
+function ownedBlueprints() {
+  const e = state.empire;
+  return e && e.blueprints ? new Set(e.blueprints) : null;
+}
+
+// missing production modules for wares your empire uses or is stalled for,
+// ranked by how much of that ware you need per hour
+function blueprintsWorthGetting(owned) {
+  const e = state.empire;
+  const need = new Map();
+  for (const st of e.stations) {
+    for (const [w, n] of stationNet(st)) need.set(w, (need.get(w) || 0) + n);
+  }
+  const stalled = stalledWares();
+  const byWare = new Map();
+  for (const b of BLUEPRINTS) {
+    if (!b.makes || owned.has(b.id)) continue;
+    // one race's module is enough: skip the ware if you own any module for it
+    if (BLUEPRINTS.some((o) => o.makes === b.makes && owned.has(o.id))) continue;
+    const short = -(need.get(b.makes) || 0);
+    const s = stalled.get(b.makes);
+    if (short <= 0 && !s) continue;
+    const value = Math.max(0, short) * W[b.makes].price.avg + (s ? s.modules * 1e6 : 0);
+    const cur = byWare.get(b.makes);
+    if (!cur || b.price < cur.b.price) byWare.set(b.makes, { b, short: Math.max(0, short), stalled: s ? s.modules : 0, value });
+  }
+  return [...byWare.values()].sort((a, b) => b.value - a.value).slice(0, 8);
+}
+
+function renderBlueprints() {
+  const summary = $("bp-summary");
+  const list = $("bp-list");
+  const controls = $("bp-controls");
+  const owned = ownedBlueprints();
+  controls.hidden = !owned;
+  if (!owned) {
+    summary.innerHTML = `<p class="quiet-note">${state.empire ? "Load your save again to see your blueprints. This empire was read by an older version." : "Load a save to see which blueprints you own and which you are missing."}</p>`;
+    list.innerHTML = "";
+    return;
+  }
+  const have = BLUEPRINTS.filter((b) => owned.has(b.id)).length;
+  const cats = BP_CATEGORIES.map((cat) => {
+    const all = BLUEPRINTS.filter((b) => b.cat === cat);
+    return { cat, total: all.length, owned: all.filter((b) => owned.has(b.id)).length };
+  }).filter((c) => c.total);
+
+  const worth = state.empire.stations.length ? blueprintsWorthGetting(owned) : [];
+  summary.innerHTML = `
+    <div class="bp-head">
+      <p class="bp-total"><span class="num">${have.toLocaleString("en-US")}</span> of ${BLUEPRINTS.length.toLocaleString("en-US")} blueprints owned <span class="dim">(${fmtPercent(have / BLUEPRINTS.length)})</span></p>
+      <div class="bp-cats">${cats.map((c) => `
+        <button type="button" class="bp-cat" data-action="bp-cat" data-id="${c.cat}" title="Show ${c.cat}">
+          <span class="bp-cat-name">${c.cat}</span>
+          <span class="num">${c.owned} / ${c.total}</span>
+          <span class="rank-bar"><span style="transform:scaleX(${c.owned / c.total})"></span></span>
+        </button>`).join("")}
+      </div>
+    </div>
+    ${worth.length ? `<section class="card bp-worth">
+      <h2>Worth getting</h2>
+      <p class="quiet-note">Production modules you have no blueprint for, for wares your stations use and do not make enough of.</p>
+      <ul class="bp-worth-list">${worth.map((x) => `
+        <li>
+          <span class="bp-worth-main"><strong>${escapeHTML(x.b.name)}</strong><span>${x.stalled ? `${x.stalled} of your modules stalled for ${W[x.b.makes].label}` : `you are short ${fmtRate(x.short)} ${W[x.b.makes].label} per hour`}</span></span>
+          <span class="bp-sellers">${x.b.owners.length ? `Sold by ${escapeHTML(x.b.owners.slice(0, 3).map(factionLabel).join(", "))}${x.b.owners.length > 3 ? ` and ${x.b.owners.length - 3} more` : ""}` : "Not sold by any faction"}</span>
+        </li>`).join("")}
+      </ul>
+    </section>` : ""}`;
+  renderBlueprintList();
+}
+
+function renderBlueprintList() {
+  const owned = ownedBlueprints();
+  const list = $("bp-list");
+  if (!owned) return;
+  const show = state.bpShow || "missing";
+  const q = (state.bpFilter || "").trim().toLowerCase();
+  document.querySelectorAll("#bp-show button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.show === show)));
+  const items = BLUEPRINTS.filter((b) => {
+    const has = owned.has(b.id);
+    if (show === "missing" && has) return false;
+    if (show === "owned" && !has) return false;
+    if (state.bpCat && b.cat !== state.bpCat) return false;
+    if (q && ![b.name, b.kind, b.dlc || "", ...b.owners.map(factionLabel)].some((t) => t.toLowerCase().includes(q))) return false;
+    return true;
+  });
+  if (!items.length) {
+    list.innerHTML = `<p class="quiet-note">${q ? `No blueprint matches "${escapeHTML(q)}".` : show === "missing" ? "You own every blueprint here." : "No blueprints here."}</p>`;
+    return;
+  }
+  const open = !!q || !!state.bpCat;
+  list.innerHTML = (state.bpCat ? `<p class="bp-filtered">Showing ${escapeHTML(state.bpCat)} only. <button type="button" class="link-btn" data-action="bp-cat" data-id="">Show all categories</button></p>` : "") +
+    BP_CATEGORIES.map((cat) => {
+      const inCat = items.filter((b) => b.cat === cat);
+      if (!inCat.length) return "";
+      const kinds = [...new Set(inCat.map((b) => b.kind))];
+      return `<details class="bp-group"${open || cat === "Station modules" ? " open" : ""}>
+        <summary><span>${cat}</span><span class="num dim">${inCat.length}</span></summary>
+        ${kinds.map((kind) => `
+          ${kinds.length > 1 || kind !== cat ? `<h4 class="bp-kind">${escapeHTML(kind)}</h4>` : ""}
+          <ul class="bp-items">${inCat.filter((b) => b.kind === kind).map((b) => {
+            const has = owned.has(b.id);
+            return `<li class="${has ? "is-owned" : "is-missing"}">
+              <span class="bp-mark" aria-label="${has ? "Owned" : "Missing"}">${has ? icon("check", 11) : ""}</span>
+              <span class="bp-text">
+                <span class="bp-name" title="${escapeHTML(b.name)}">${escapeHTML(b.name)}${b.dlc ? ` <span class="tag is-plain">${escapeHTML(b.dlc)}</span>` : ""}</span>
+                ${has ? "" : `<span class="bp-from" title="${escapeHTML(b.owners.map(factionLabel).join(", "))}">${b.owners.length ? `Sold by ${escapeHTML(b.owners.slice(0, 2).map(factionLabel).join(", ") + (b.owners.length > 2 ? ` and ${b.owners.length - 2} more` : ""))}` : "Not sold by any faction"}</span>`}
+              </span>
+            </li>`;
+          }).join("")}</ul>`).join("")}
+      </details>`;
+    }).join("");
+}
+
+function bindBlueprints() {
+  $("bp-filter").addEventListener("input", (e) => {
+    state.bpFilter = e.target.value;
+    renderBlueprintList();
+  });
+  document.querySelectorAll("#bp-show button").forEach((b) => b.addEventListener("click", () => {
+    state.bpShow = b.dataset.show;
+    renderBlueprintList();
+  }));
+}
+
+/* ---------------------------------------------------------------------
    Rewards: level ladder and achievements
 --------------------------------------------------------------------- */
 
@@ -2643,7 +2811,8 @@ function saveProgress() {
 
 // called on every refresh; pops the celebration when something new happens
 function checkProgress(levelIndex) {
-  if (state.importing || progress.highest === null) return;
+  if (state.importing || progress.highest === null || !state.checkProgress) return;
+  state.checkProgress = false;
   const earned = earnedAchievements();
   const fresh = earned.filter((id) => !progress.achievements.includes(id));
   const levelUp = state.moduleCounts.size > 0 && levelIndex > progress.highest;
@@ -3023,8 +3192,10 @@ async function importSave(file) {
       skipped: counter.skipped,
       stations: converted,
       market: summariseMarket(market),
+      hasTradeLog: (result.trades || []).length > 0,
       flows: summariseFlows(result, converted),
       missions: summariseMissions(result.missions, info, converted, result),
+      blueprints: result.blueprints || [],
     };
     state.openStation = null;
     state.plan = {};
@@ -3041,6 +3212,7 @@ async function importSave(file) {
     setStatus(`Could not read that save: ${e.message || e}.`);
   } finally {
     state.importing = null;
+    state.checkProgress = ok; // the refresh below may celebrate what this save reached
     refresh();
   }
   return ok;
@@ -3093,6 +3265,7 @@ function bindEmpireEvents() {
   });
   els.loadSave.addEventListener("click", () => loadNewestSave());
   bindPalette();
+  bindBlueprints();
   $("station-filter").addEventListener("input", (e) => {
     state.stationFilter = e.target.value;
     renderStationsTab();
@@ -3106,7 +3279,7 @@ function bindEmpireEvents() {
     else state.openGroups.delete(d.dataset.key);
   }, true);
   // 1 to 5 switch Empire tabs
-  const TAB_KEYS = ["overview", "stations", "supply", "logistics", "prices", "missions", "rewards"];
+  const TAB_KEYS = ["overview", "stations", "supply", "logistics", "prices", "missions", "blueprints", "rewards"];
   document.addEventListener("keydown", (e) => {
     if (state.view !== "empire" || !$("modal").hidden || e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement || e.target instanceof HTMLTextAreaElement) return;
@@ -3145,7 +3318,7 @@ function bindEmpireEvents() {
       renderStationsTab();
     } else if (action === "open-station") openStation(id);
     else if (action === "open-tab") {
-      if (btn.dataset.sort) state.stationSort = { key: btn.dataset.sort, dir: 1 };
+      if (btn.dataset.sort) state.stationSort = { key: btn.dataset.sort, dir: -1 };
       setEmpireTab(id);
     }
     else if (action === "plan-ware") {
@@ -3153,6 +3326,10 @@ function bindEmpireEvents() {
       selectWare(id);
     }
     else if (action === "hub-remove") setHub(id, false);
+    else if (action === "bp-cat") {
+      state.bpCat = state.bpCat === id ? "" : id;
+      renderBlueprintList();
+    }
     else if (action === "toggle-history") {
       state.historyAll = !state.historyAll;
       renderMissions();

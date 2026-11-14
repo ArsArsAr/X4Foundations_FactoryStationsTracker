@@ -36,6 +36,8 @@
     // missions: what is in progress, what is on offer, and the logbook of what was done
     const missions = { active: [], offers: [], log: [], stats: {} };
     const mis = { inBlock: false, mission: null, offer: null, briefing: false, thread: false };
+    const blueprints = []; // ware IDs the player owns a blueprint for
+    let inBlueprints = false;
     const market = {};     // ware -> { buy: [[price, amount, sector, owner]], sell: [...] }
     let current = null;    // nearest station entry (player or NPC) on the stack
     let sector = null;     // nearest sector macro on the stack
@@ -162,6 +164,16 @@
       }
       if (mis.inBlock) {
         missionLine(s);
+        return;
+      }
+      // the player's blueprints: one <blueprint ware="..."/> line each
+      if (s === "<blueprints>") {
+        inBlueprints = true;
+        return;
+      }
+      if (inBlueprints) {
+        if (s === "</blueprints>") inBlueprints = false;
+        else if (s.startsWith("<blueprint ")) blueprints.push(attr(s, "ware"));
         return;
       }
       if (s.startsWith("<entry ") && s.includes(' category="missions"')) {
@@ -317,7 +329,7 @@
     return {
       line,
       result: () => ({
-        stations, market, ships, trades, missions, info: saveInfo,
+        stations, market, ships, trades, missions, blueprints, info: saveInfo,
         log: { start: Number.isFinite(eco.start) ? eco.start : null, end: eco.end || null },
       }),
     };
