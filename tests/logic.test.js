@@ -205,3 +205,15 @@ test("lookup tables have no built-in properties for a save to reach", () => {
   }
   assert.equal(get("factionLabel")("constructor"), "Constructor", "an unknown faction is just capitalised");
 });
+
+test("a trader's buy-from-NPC, sell-to-NPC run is trading, not your stations' supply", () => {
+  const { result, converted } = haulWorld();
+  result.ships.push({ id: "[arb]", macro: "ship_arg_l_trans_container_01_a_macro", code: "ARB", order: "TradeRoutine" });
+  result.trades.push([3100, "hullparts", "[arb]", "[npc1]", 150, 40]); // buys from one NPC
+  result.trades.push([3200, "hullparts", "[npc2]", "[arb]", 210, 40]); // sells to another
+  const flows = get("summariseFlows")(result, converted);
+  close(flows.wares.hullparts.sold, 10, "only the factory's own sale counts as sold");
+  close(flows.wares.hullparts.bought, 0, "nothing was bought for a station");
+  close(flows.wares.energycells.bought, 50, "the freighter's purchase did feed the factory");
+  close(flows.actual.revenue, 2000 + 40 * 210, "the trader's sale is still real money");
+});

@@ -1128,10 +1128,13 @@ function levelFor(profit) {
 function computeBalance() {
   const supply = new Map();
   const demand = new Map();
+  const effort = new Map(); // ware -> [modules, sum of efficiency]
 
   for (const u of productionUnits()) {
     const f = unitFlows(u);
     supply.set(u.ware, (supply.get(u.ware) || 0) + f.made);
+    const e = effort.get(u.ware) || [0, 0];
+    effort.set(u.ware, [e[0] + u.count, e[1] + u.count * u.efficiency]);
     for (const i of f.uses) demand.set(i.ware, (demand.get(i.ware) || 0) + i.amount);
   }
   for (const [ware, n] of empireUpkeep()) demand.set(ware, (demand.get(ware) || 0) + n);
@@ -1146,7 +1149,10 @@ function computeBalance() {
     const sup = supply.get(id) || 0;
     const net = sup - dem;
     const short = net < -1e-6;
-    return { id, tracked: true, demand: dem, supply: sup, net, short, modulesNeeded: short ? Math.ceil(-net / pm - 1e-9) : 0 };
+    // new modules will run like the ones you have (sunlight, workforce), not at 100%
+    const e = effort.get(id);
+    const perNew = pm * (e && e[0] ? Math.max(0.05, e[1] / e[0]) : 1);
+    return { id, tracked: true, demand: dem, supply: sup, net, short, modulesNeeded: short ? Math.ceil(-net / perNew - 1e-9) : 0 };
   });
 
   return rows.sort((a, b) => {

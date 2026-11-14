@@ -1137,7 +1137,8 @@ function priceAdvice() {
       const mk = market[ware] || {};
       const rivals = side === "sell" ? mk.sell : mk.buy;   // others doing the same
       const partners = side === "sell" ? mk.buy : mk.sell; // the other side of the trade
-      const perHour = (side === "sell" ? sold : bought).get(ware) || 0;
+      const flow = e.flows && e.flows.wares ? e.flows.wares[ware] : null;
+      const perHour = flow ? (side === "sell" ? flow.sold : flow.bought) || 0 : (side === "sell" ? sold : bought).get(ware) || 0;
       const row = { side, ware, own, rivals, partners, perHour, stations: m.stations, kind: "ok", effect: 0, target: null };
       const w = W[ware];
 
@@ -1358,7 +1359,16 @@ function summariseFlows(result, converted) {
   for (const [id, x] of Object.entries(books)) {
     actual.stations[id] = { sold: x.sold / hours, bought: x.bought / hours, soldNpc: x.soldNpc / hours, boughtNpc: x.boughtNpc / hours };
   }
-  return { hours, wares, minerCount, perMiner, actual, ...summariseRoutes(result, converted, hours, end) };
+  const traced = summariseRoutes(result, converted, hours, end);
+  const ownStations = new Set(converted.map((c) => c.id));
+  for (const w of Object.values(wares)) { w.bought = 0; w.sold = 0; }
+  for (const r of traced.routes) {
+    const f = wares[r.ware];
+    if (!f) continue;
+    if (r.from === "npc" && ownStations.has(r.to)) f.bought += r.perHour;
+    else if (r.to === "npc" && ownStations.has(r.from)) f.sold += r.perHour;
+  }
+  return { hours, wares, minerCount, perMiner, actual, ...traced };
 }
 
 // empire-wide units per hour your stations use (modules at full speed, plus workers)
@@ -2763,7 +2773,7 @@ function achievementContext() {
     solar: getCount("energycells"),
     races: races.size,
     shortfalls: computeBalance().filter((r) => r.short).length,
-    minerals: BASE_MINERALS.filter((id) => isBuilt(id) || stocked.has(id)).length,
+    minerals: BASE_MINERALS.filter((id) => isSourced(id) || stocked.has(id)).length,
     bestStation: Math.max(0, ...stations.map((st) => stationValue(st))),
     fullyStaffed: stations.some((st) => st.workforceNeed > 0 && st.workforce >= st.workforceNeed),
     profit: empireProfit(),
