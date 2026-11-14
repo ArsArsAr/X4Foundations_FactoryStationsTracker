@@ -185,3 +185,23 @@ test("mission history keeps the last state of each mission", () => {
   assert.deepEqual([...history.map((h) => `${h.title}:${h.status}`)], ["Gave Up:aborted", "Defenders of Sol:chapter", "Shields Down!:completed"],
     "newest first; an accepted mission that is still active is not listed as done");
 });
+
+test("text from a save is escaped before it reaches the page", () => {
+  const evil = "<img src=x onerror=alert(1)>";
+  const esc = get("escapeHTML");
+  assert.equal(esc(evil), "&lt;img src=x onerror=alert(1)&gt;");
+  assert.equal(esc(`a"b'c&d`), "a&quot;b&#39;c&amp;d");
+  const html = get("missionCard")({
+    id: evil, name: evil, description: evil, faction: evil, type: evil, caption: evil, reward: 0, rewardtext: evil,
+    age: 1, objectives: [{ step: 1, type: evil, text: evil, name: evil, active: true }], current: 1, thread: [], parent: null,
+  });
+  assert.ok(!html.includes("<img"), "no raw markup in a mission card");
+});
+
+test("lookup tables have no built-in properties for a save to reach", () => {
+  for (const name of ["WARES_DATA", "MODULE_MACROS", "SECTORS", "STORAGE", "HABITATS"]) {
+    assert.equal(get(name).toString, undefined, `${name}.toString`);
+    assert.equal(get(name).constructor, undefined, `${name}.constructor`);
+  }
+  assert.equal(get("factionLabel")("constructor"), "Constructor", "an unknown faction is just capitalised");
+});

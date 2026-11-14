@@ -212,3 +212,15 @@ test("reads the player's blueprints", async () => {
   const { blueprints } = await scan(SAVE);
   assert.deepEqual(blueprints, ["module_gen_prod_hullparts_01", "ship_arg_m_trans_container_01_a"]);
 });
+
+test("a crafted save cannot use built-in property names as wares or station codes", async () => {
+  const evil = SAVE
+    .replace('code="AAA-111"', 'code="constructor"')
+    .replace('<ware ware="energycells" amount="100"/>', '<ware ware="energycells" amount="100"/>\n<ware ware="__proto__" amount="5"/>')
+    .replace('<blueprint ware="module_gen_prod_hullparts_01"/>', '<blueprint ware="module_gen_prod_hullparts_01"/>\n<blueprint ware="__proto__"/>');
+  const { stations, blueprints } = await scan(evil);
+  assert.equal(stations[0].code, null, "an unsafe station code is dropped");
+  assert.deepEqual(Object.keys(stations[0].cargo), ["energycells"], "an unsafe ware is skipped");
+  assert.ok(!blueprints.includes("__proto__"));
+  assert.equal(({}).amount, undefined, "nothing leaked onto every object");
+});

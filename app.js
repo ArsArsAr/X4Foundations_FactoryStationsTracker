@@ -15,6 +15,13 @@
      built   - what the player says they actually have (saved, global)
 --------------------------------------------------------------------- */
 
+// Lookup tables keyed by names that can come from a save file: give them no
+// prototype, so W["toString"] or SECTORS["__proto__"] finds nothing instead
+// of a built-in function.
+for (const table of [WARES_DATA, MODULE_MACROS, SECTORS, HABITATS, STORAGE, WORKFORCE, FACTION_TEXT]) {
+  Object.setPrototypeOf(table, null);
+}
+
 const W = WARES_DATA;
 
 const STORAGE_KEY = "x4-factories-planner:module-counts";

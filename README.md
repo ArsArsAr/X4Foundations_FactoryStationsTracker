@@ -2,7 +2,11 @@
 
 A production-chain planner and empire dashboard for **[X4: Foundations](https://www.egosoft.com/games/x4/info_en.html)**. Load your save and it reads every station you own: modules, race recipes, sunlight, workforce, stock and trade prices. It shows what needs fixing, roughly what each station earns, how your prices compare with the NPC market in your own universe, and ranks your empire from Space Toddler upwards. It also plans any production chain down to raw materials next to what you already have.
 
-No install, no account, no server, no internet needed. Clone it, double-click `index.html`, and it runs in your browser.
+**Use it online: [arsarsar.github.io/X4Foundations_FactoryStationsTracker](https://arsarsar.github.io/X4Foundations_FactoryStationsTracker/)**
+
+Or run it offline: no install, no account, no server. Download or clone the repository, double-click `index.html`, and it runs in your browser.
+
+Either way your save is read inside your own browser and never uploaded anywhere.
 
 > This is a fan-made tool, not affiliated with or endorsed by Egosoft.
 
@@ -38,8 +42,7 @@ X4's economy is a real dependency graph. Almost everything needs Energy Cells, m
 
 ## Getting started
 
-1. Download or clone this repository.
-2. Double-click `index.html`.
+1. Open the [online version](https://arsarsar.github.io/X4Foundations_FactoryStationsTracker/), or download this repository and double-click `index.html`.
 3. Click **Load save** and pick your newest save, or choose **Use my save folder** once (Chrome and Edge) so that later loads always take the newest save in one click. On Windows saves live in `Documents\Egosoft\X4\<number>\save`, for example `quicksave.xml.gz`. On Linux they are in `~/.config/EgoSoft/X4/<number>/save`.
 
 ### Using it
@@ -113,7 +116,7 @@ Tier 0 is not the same thing as "mined". Energy Cells is tier 0 (a Solar Power P
 
 **Saved data** lives in `localStorage`: `x4-factories-planner:module-counts` (built modules), `x4-factories-planner:empire` (stations and market summary from the last save), `x4-factories-planner:history` (earnings per loaded save), `x4-factories-planner:progress` (highest level and achievements earned), `x4-factories-planner:plan` (the what-if plan), `x4-factories-planner:hubs` (stations you track or untrack as hubs) and `x4-factories-planner:ui` (open chain, target, view, chain options). The remembered save folder is kept in IndexedDB. If storage is unavailable the app still works, it just does not remember.
 
-**Caching note**: if you edit the app's files and a reload does not pick up the change, bump the `?v=35` query string on the `<link>`/`<script>` tags in `index.html`.
+**Caching note**: if you edit the app's files and a reload does not pick up the change, bump the `?v=36` query string on the `<link>`/`<script>` tags in `index.html`.
 
 ## Known limitations
 
@@ -124,6 +127,17 @@ Tier 0 is not the same thing as "mined". Energy Cells is tier 0 (a Solar Power P
 - **Scrap recyclers are not modelled.** They have no fixed recipe, so a save import skips them and says so.
 - **Earnings are estimates** at average prices (see above). Hand-entered modules count at 100% efficiency; modules from a save use the efficiency the game recorded.
 - **Built for a desktop window.** Narrow windows still work, but it is not a phone layout.
+
+## Privacy and security
+
+- **Nothing leaves your computer.** The app has no server, no accounts, no analytics and no network requests. Save files are unpacked and read in your browser; nothing is uploaded, including on the online version.
+- **What it remembers** stays in your browser's storage for this site (see "Saved data" above). Reset clears built modules; your browser's site settings clear everything.
+- **Save files are treated as untrusted.** A save can be edited by anyone, so every piece of text taken from one (station, ship and mission names, factions and so on) is escaped before it is shown, names that could tamper with JavaScript objects are rejected while reading, and the lookup tables have no built-in properties a save could reach. The tests in `tests/` include crafted-save cases for this.
+- **No third-party code.** No libraries, no CDN, no external fonts: everything the page runs is in this repository.
+
+## License
+
+The code is released under the [MIT License](LICENSE). Game data and names belong to Egosoft; the fonts are under the SIL Open Font License (`fonts/OFL.txt`).
 
 ## Contributing
 

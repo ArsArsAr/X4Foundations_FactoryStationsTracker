@@ -3,3 +3,6 @@
 
 # Local design-tool state and cache (impeccable skill)
 .impeccable/
+
+# Local copies of saves used for testing: never commit these
+_testdata/

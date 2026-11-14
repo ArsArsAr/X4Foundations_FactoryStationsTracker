@@ -15,12 +15,12 @@ const PROGRESS_KEY = "x4-factories-planner:progress";
 const PLAN_KEY = "x4-factories-planner:plan";
 const HISTORY_KEY = "x4-factories-planner:history";
 
-const METHOD_LABEL = {
+const METHOD_LABEL = Object.assign(Object.create(null), {
   teladi: "Teladi", terran: "Terran", boron: "Boron", paranid: "Paranid",
   split: "Split", argon: "Argon", recycling: "Recycling",
-};
+});
 
-const FACTION_LABEL = {
+const FACTION_LABEL = Object.assign(Object.create(null), {
   argon: "Argon Federation", antigone: "Antigone Republic", hatikvah: "Hatikvah Free League",
   teladi: "Teladi Company", ministry: "Ministry of Finance", paranid: "Godrealm of the Paranid",
   holyorder: "Holy Order", trinity: "Trinity", alliance: "Alliance of the Word",
@@ -28,7 +28,7 @@ const FACTION_LABEL = {
   court: "Court of Curbs", terran: "Terran Protectorate", pioneers: "Segaris Pioneers",
   boron: "Queendom of Boron", scaleplate: "Scale Plate Pact", buccaneers: "Duke's Buccaneers",
   loanshark: "Vigor Syndicate", yaki: "Yaki", scavenger: "Riptide Rakers",
-};
+});
 
 const STALL_STATES = new Set(["waitingforresources"]);
 const RUNWAY_WARN_HOURS = 4;
@@ -1685,7 +1685,7 @@ function summariseRoutes(result, converted, hours, end) {
       const a = activity.get(s.id) || { trades: 0, last: 0, mined: new Map() };
       const top = [...a.mined].sort((x, y) => y[1] - x[1])[0];
       return {
-        code: s.code, name: s.name, type: shipType(s.macro), size: (s.macro.split("_")[2] || "").toUpperCase(),
+        code: s.code, name: s.name, type: shipType(s.macro), size: /^(xs|s|m|l|xl)$/.test(s.macro.split("_")[2] || "") ? s.macro.split("_")[2].toUpperCase() : "",
         order: s.order || null, role: shipRole(s), raw: rawHaul(s),
         trades: a.trades, idle: a.last ? (end - a.last) / 3600 : null,
         home: homeOf.get(s.id) || null, mines: top ? top[0] : null,
@@ -2078,7 +2078,7 @@ function renderFleet() {
   box.innerHTML = head + reb + `
     <div class="fl-row fl-head"><span>Ship</span><span>Order</span><span>Home</span><span>${term("Trades", "fleettrades")}</span><span>Problem</span></div>
     ${shown.map((p) => `<div class="fl-row">
-      <span class="fl-ship"><span class="fl-name">${escapeHTML(p.label)}</span><span class="price-sub">${p.s.size ? p.s.size + " " : ""}${p.s.type}${p.s.raw ? ", hauls raw" : ""}</span></span>
+      <span class="fl-ship"><span class="fl-name">${escapeHTML(p.label)}</span><span class="price-sub">${p.s.size ? escapeHTML(p.s.size) + " " : ""}${p.s.type}${p.s.raw ? ", hauls raw" : ""}</span></span>
       <span class="fl-order">${escapeHTML(p.s.order || "none")}</span>
       <span>${p.s.home ? routeLink(p.s.home) : `<span class="dim">none</span>`}</span>
       <span class="num ${p.s.trades ? "" : "dim"}">${p.s.trades}</span>
@@ -2110,12 +2110,12 @@ function stationRoutes(st) {
    store counts inside a step (such as 12 of 21 delivered).
 --------------------------------------------------------------------- */
 
-const MISSION_TYPE = {
+const MISSION_TYPE = Object.assign(Object.create(null), {
   plot: "Story", fight: "Combat", destroy: "Combat", trade: "Trade", deliver: "Delivery", build: "Construction",
   find: "Search", intelligence: "Intelligence", protect: "Protection", patrol: "Patrol", escort: "Escort",
   think: "Project", talkto: "Talk", custom: "Task", tutorial: "Tutorial", upkeep: "Upkeep",
-};
-const LEVEL_LABEL = { trivial: "trivial", veryeasy: "very easy", easy: "easy", medium: "medium", hard: "hard", veryhard: "very hard", impossible: "impossible" };
+});
+const LEVEL_LABEL = Object.assign(Object.create(null), { trivial: "trivial", veryeasy: "very easy", easy: "easy", medium: "medium", hard: "hard", veryhard: "very hard", impossible: "impossible" });
 
 function missionFaction(id) {
   if (!id) return "";
@@ -2287,7 +2287,7 @@ function renderMissions() {
       ${list.map((o) => `<div class="m-offer">
         <span class="m-offer-name">${escapeHTML(o.name)}${o.subs.length ? `<span class="price-sub">${o.subs.map((x) => escapeHTML(x.name)).join(", ")}</span>` : ""}</span>
         <span class="dim">${escapeHTML([missionType(o.type), missionFaction(o.faction)].filter(Boolean).join(", "))}</span>
-        <span class="dim">${LEVEL_LABEL[o.level] || o.level || ""}</span>
+        <span class="dim">${escapeHTML(LEVEL_LABEL[o.level] || o.level || "")}</span>
         <span class="num">${o.reward ? fmtCredits(o.reward) + " Cr" : ""}${o.rewardtext ? `<span class="price-sub">${escapeHTML(o.rewardtext)}</span>` : ""}</span>
       </div>`).join("")}`;
   }).join("") + (tutorials.length ? `<p class="quiet-note m-tut">${tutorials.length} ${plural(tutorials.length, "tutorial")} not done yet: ${tutorials.map((t) => escapeHTML(t.name.replace(/^\d+\)\s*/, ""))).join(", ")}.</p>` : "");

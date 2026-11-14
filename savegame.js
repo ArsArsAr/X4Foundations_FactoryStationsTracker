@@ -21,6 +21,15 @@
     return m ? m[1] : null;
   };
 
+  // A save is a file anyone can edit. Values the app uses as object keys
+  // (ware, station code, race, ids) must never be JavaScript's built-in
+  // property names, or a crafted save could tamper with every object.
+  const UNSAFE_KEYS = new Set(["__proto__", "constructor", "prototype"]);
+  const key = (line, name) => {
+    const v = attr(line, name);
+    return v === null || UNSAFE_KEYS.has(v) ? null : v;
+  };
+
   const unescapeXml = (s) =>
     s.replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
 
@@ -80,7 +89,7 @@
         const entry = { cls, macro, ship: cls.startsWith("ship_") };
         if (entry.ship && attr(s, "owner") === "player") {
           const name = attr(s, "name");
-          entry.playerShip = { id: attr(s, "id"), macro, code: attr(s, "code"), name: name ? unescapeXml(name) : null, order: null };
+          entry.playerShip = { id: attr(s, "id"), macro, code: key(s, "code"), name: name ? unescapeXml(name) : null, order: null };
           ships.push(entry.playerShip);
         }
 
@@ -91,7 +100,7 @@
             entry.station = {
               name: name ? unescapeXml(name) : null,
               id: attr(s, "id"),
-              code: attr(s, "code"),
+              code: key(s, "code"),
               macro,
               sector,
               underConstruction: attr(s, "state") === "construction",
@@ -151,7 +160,8 @@
           if (t < eco.start) eco.start = t;
           if (t > eco.end) eco.end = t;
           if (s.includes(' type="trade"') && s.includes(" buyer=") && s.includes(" seller=")) {
-            trades.push([t, attr(s, "ware"), attr(s, "buyer"), attr(s, "seller"), Number(attr(s, "price")) / 100, Number(attr(s, "v")) || 0]);
+            const ware = key(s, "ware");
+            if (ware) trades.push([t, ware, attr(s, "buyer"), attr(s, "seller"), Number(attr(s, "price")) / 100, Number(attr(s, "v")) || 0]);
           }
         }
         return;
@@ -173,7 +183,10 @@
       }
       if (inBlueprints) {
         if (s === "</blueprints>") inBlueprints = false;
-        else if (s.startsWith("<blueprint ")) blueprints.push(attr(s, "ware"));
+        else if (s.startsWith("<blueprint ")) {
+          const ware = key(s, "ware");
+          if (ware) blueprints.push(ware);
+        }
         return;
       }
       if (s.startsWith("<entry ") && s.includes(' category="missions"')) {
@@ -207,7 +220,7 @@
 
       // trade offers: a station's own buy and sell orders (price in hundredths)
       if (s.startsWith("<trade ") && !inShip) {
-        const ware = attr(s, "ware");
+        const ware = key(s, "ware");
         const price = Number(attr(s, "price"));
         if (!ware || !Number.isFinite(price)) return;
         const side = s.includes(" buyer=") ? "buy" : s.includes(" seller=") ? "sell" : null;
@@ -236,7 +249,8 @@
       } else if (s === "<override>") {
         block = "override";
       } else if (s.startsWith("<ware ")) {
-        const ware = attr(s, "ware");
+        const ware = key(s, "ware");
+        if (!ware) return; // missing or unsafe ware name
         if (block === "cargo") {
           const n = Number(attr(s, "amount")) || 0;
           if (n) st.cargo[ware] = (st.cargo[ware] || 0) + n;
@@ -261,7 +275,7 @@
         const n = Number(attr(s, "amount"));
         if (Number.isFinite(n)) {
           st.workforce += n;
-          const race = attr(s, "race") || "argon";
+          const race = key(s, "race") || "argon";
           st.workforceByRace[race] = (st.workforceByRace[race] || 0) + n;
         }
       }
