@@ -121,7 +121,7 @@
         } else if (current && current.station && !inShip) {
           const st = current.station;
           if (cls === "production") {
-            entry.module = { macro, efficiency: null, built: attr(s, "state") !== "construction", state: null, shortage: null };
+            entry.module = { macro, efficiency: null, built: attr(s, "state") !== "construction", state: null, shortage: null, overflow: false, paused: false };
             st.modules.push(entry.module);
           } else if (cls === "buildprocessor") {
             st.buildProcessors++;
@@ -265,6 +265,11 @@
         }
       } else if (s.startsWith("<production ") && top() && top().module) {
         top().module.state = attr(s, "state");
+        top().module.paused = attr(s, "paused") === "1";
+      } else if (s === "<overflow>" && top() && top().module) {
+        // the module cannot store what it makes: the station's space for
+        // that ware is full, so it sits idle until some is taken away
+        top().module.overflow = true;
       } else if (s.startsWith("<efficiency ")) {
         const t = top();
         if (t && t.module && t.module.efficiency === null) {

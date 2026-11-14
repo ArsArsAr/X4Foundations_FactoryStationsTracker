@@ -2255,3 +2255,5 @@ a.btn { text-decoration: none; }
 .bp-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bp-name .tag { margin-left: 4px; font-size: 10.5px; }
 .bp-from { overflow: hidden; color: var(--text-3); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+
+.node-stall.is-idle { color: var(--warn); }

@@ -29,6 +29,16 @@ const SAVE = `<?xml version="1.0" encoding="UTF-8"?>
 </component>
 <component class="production" macro="prod_gen_energycells_macro" state="construction" id="[0x12]">
 </component>
+<component class="production" macro="prod_gen_graphene_macro" id="[0x15]">
+<production start="1" end="2" item="0" paused="1" state="choosingitem">
+<efficiency product="1"/>
+<queue ware="graphene" method="default">
+<overflow>
+<ware ware="graphene" amount="7"/>
+</overflow>
+</queue>
+</production>
+</component>
 <component class="buildprocessor" macro="buildprocessor_macro" id="[0x19]">
 </component>
 <component class="habitation" macro="hab_arg_s_01_macro" id="[0x13]"/>
@@ -141,7 +151,7 @@ test("reads the player station and its modules", async () => {
   assert.equal(st.code, "AAA-111");
   assert.equal(st.id, "[0x10]");
   assert.equal(st.sector, "cluster_01_sector001_macro");
-  assert.equal(st.modules.length, 2);
+  assert.equal(st.modules.length, 3);
   const [hull, cells] = st.modules;
   assert.deepEqual(
     { macro: hull.macro, state: hull.state, efficiency: hull.efficiency, built: hull.built, shortage: hull.shortage },
@@ -223,4 +233,13 @@ test("a crafted save cannot use built-in property names as wares or station code
   assert.deepEqual(Object.keys(stations[0].cargo), ["energycells"], "an unsafe ware is skipped");
   assert.ok(!blueprints.includes("__proto__"));
   assert.equal(({}).amount, undefined, "nothing leaked onto every object");
+});
+
+test("reads modules that are idle because their output has no room, and paused ones", async () => {
+  const st = (await scan(SAVE)).stations[0];
+  const graphene = st.modules.find((m) => m.macro === "prod_gen_graphene_macro");
+  assert.equal(graphene.overflow, true, "overflow means its output storage is full");
+  assert.equal(graphene.paused, true);
+  assert.equal(st.modules[0].overflow, false);
+  assert.deepEqual(st.cargo, { energycells: 100 }, "the overflow ware is not stock");
 });

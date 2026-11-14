@@ -185,6 +185,14 @@ function isSourced(id) {
   return isBuilt(id) || (W[id].isMined && minedBySave(id) > 0);
 }
 
+// modules of this ware idle because their output storage is full
+function idleModules(id) {
+  if (!state.empire) return 0;
+  let n = 0;
+  for (const st of state.empire.stations) for (const m of st.modules) if (m.ware === id) n += m.idle || 0;
+  return n;
+}
+
 // modules of this ware stalled across your stations
 function stalledModules(id) {
   if (!state.empire) return 0;
@@ -865,7 +873,9 @@ function buildNode(id, data, isRoot) {
   }
 
   const stalled = w.isMined ? 0 : stalledModules(id);
+  const idle = w.isMined ? 0 : idleModules(id);
   if (stalled) el.classList.add("is-stalled");
+  const stallText = [stalled ? `${stalled} of yours stalled` : "", idle ? `${idle} idle, no room` : ""].filter(Boolean).join(", ");
   el.innerHTML = `
     <div class="node-head">
       <button type="button" class="node-title" data-fk="node:${id}:title">${w.label}</button>
@@ -873,7 +883,7 @@ function buildNode(id, data, isRoot) {
     </div>
     <div class="node-rate"><span class="num">${fmtRate(data.rate)}</span><span class="unit">per hour</span></div>
     <div class="node-need"><span>${need}</span>${have}</div>
-    ${stalled ? `<div class="node-stall" title="Modules of ${w.label} in your stations that are waiting for inputs">${stalled} of yours stalled</div>` : ""}
+    ${stallText ? `<div class="node-stall${stalled ? "" : " is-idle"}" title="Stalled: waiting for inputs. Idle: storage for the output is full.">${stallText}</div>` : ""}
     <div class="node-meta"><span class="num">${fmtPrice(w.price.avg)}</span><span>${w.storageType}</span></div>
   `;
 

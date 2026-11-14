@@ -93,7 +93,7 @@ const TERMS = {
   forsale: "Units NPC stations are offering for sale right now.",
   onemodule: "What one module adds per hour at local prices: output at the typical NPC buying price, minus inputs at the typical NPC selling price.",
   payback: "Build cost of one module divided by what it adds per hour.",
-  estimate: "What your modules make per hour, minus their inputs and their workers' food, everything at the game's average prices. Assumes every module runs and everything sells.",
+  estimate: "What your modules make per hour, minus their inputs and their workers' food, everything at the game's average prices. Assumes every module runs (idle and stalled ones too) and everything sells.",
   actual: "Credits that really changed hands with NPC stations in the save's trade log, per hour. Trades between your own stations and ships are left out: that money stays in your empire. Stock that piles up or runs down is not counted.",
   stationactual: "This station's own books from the trade log, per hour: what it sold minus what it bought, at the real prices, including trades with your own ships.",
   fleettrades: "Trades this ship made in the save's trade log (loading and delivering both count).",
@@ -279,6 +279,16 @@ function attentionIssues() {
     const stalledWares = new Set();
 
     for (const m of st.modules) {
+      if (!m.idle) continue;
+      issues.push({
+        sev: 3, st, kind: "full", ware: m.ware, idle: m.idle,
+        title: `${m.idle} of ${m.count} ${W[m.ware].label} ${plural(m.count, "module")} idle, no room for output`,
+        sub: `Its storage for ${W[m.ware].label} is full`,
+        weight: m.idle * Math.max(0, moduleValue(m.ware, m.method, m.efficiency)),
+      });
+    }
+
+    for (const m of st.modules) {
       if (!m.stalled) continue;
       const short = (m.short || []).filter((id) => W[id]);
       short.forEach((id) => stalledWares.add(id));
@@ -363,7 +373,7 @@ function attentionIssues() {
   return issues.sort((a, b) => b.sev - a.sev || b.weight - a.weight);
 }
 
-const ISSUE_ICON = { fleet: "clock", hub: "warning", stalled: "warning", runway: "clock", storage: "warning", workforce: "trend-up", mining: "warning", internal: "trend-up" };
+const ISSUE_ICON = { full: "warning", fleet: "clock", hub: "warning", stalled: "warning", runway: "clock", storage: "warning", workforce: "trend-up", mining: "warning", internal: "trend-up" };
 
 const SEV_LABEL = { 3: "Urgent", 2: "Soon", 1: "Worth a look" };
 
@@ -408,6 +418,21 @@ function attentionGroups() {
       g.weight += i.weight;
     }
   }
+  // idle makers: if the same ware has stations waiting for it, it is a
+  // distribution problem (it piles up in one place, missing in another)
+  for (const i of issues) {
+    if (i.kind !== "full") continue;
+    const waiting = groups.get(`ware:${i.ware}`);
+    if (waiting && waiting.kind === "stalled") {
+      waiting.items.push(i);
+      waiting.weight += i.weight;
+      waiting.misplaced = true;
+    } else {
+      const g = add(`full:${i.ware}`, { sev: 3, kind: "full", ware: i.ware });
+      g.items.push(i);
+      g.weight += i.weight;
+    }
+  }
 
   for (const g of groups.values()) {
     const stations = new Set(g.items.filter((i) => i.st).map((i) => i.st.id)).size;
@@ -419,8 +444,20 @@ function attentionGroups() {
       if (stalledStations) g.sub = g.sub.replace(/stalled waiting for it\./, `stalled at ${stalledAt}.`);
     } else if (g.kind === "stalled") {
       const n = g.items.reduce((s, i) => s + (i.stalled || 0), 0);
-      g.title = `Short of ${label}`;
-      g.sub = `${n} ${plural(n, "module")} stalled at ${stalledAt}.`;
+      if (g.misplaced) {
+        const idle = g.items.reduce((s, i) => s + (i.idle || 0), 0);
+        const makers = [...new Set(g.items.filter((i) => i.kind === "full").map((i) => stationLabel(i.st)))];
+        g.title = `${label} piles up where it is made and is missing where it is needed`;
+        g.sub = `${idle} ${plural(idle, "module")} idle with full storage at ${makers.slice(0, 2).join(", ")}${makers.length > 2 ? " and more" : ""}, while ${n} ${plural(n, "module")} wait for it at ${stalledAt}. Move it with traders or through a hub.`;
+      } else {
+        g.title = `Short of ${label}`;
+        g.sub = `${n} ${plural(n, "module")} stalled at ${stalledAt}.`;
+      }
+    } else if (g.kind === "full") {
+      const idle = g.items.reduce((s, i) => s + i.idle, 0);
+      const makers = [...new Set(g.items.map((i) => stationLabel(i.st)))];
+      g.title = `${idle} ${label} ${plural(idle, "module")} idle: no room for output`;
+      g.sub = `Storage for ${label} is full at ${makers.slice(0, 2).join(", ")}${makers.length > 2 ? " and more" : ""}. Sell more (a lower price, or an offer open to everyone), move it out with traders, or give it more storage space.`;
     } else if (g.kind === "runway") {
       const wares = new Set(g.items.map((i) => i.ware));
       g.title = `Low stock of ${wares.size} ${plural(wares.size, "ware")} at ${at}`;
@@ -585,6 +622,7 @@ function renderOverview() {
     ? [
         own !== null ? `At your own trade prices: <strong class="num">${fmtCredits(own)}</strong> Cr per hour.` : "",
         a ? `Sold ${fmtCredits(a.revenue)}, bought ${fmtCredits(a.cost)} per hour${state.empire.stations.some((st) => st.buildsShips) ? "; ship sales at your wharfs are not in the trade log" : ""}.` : "",
+        idleNote(),
         "Your level uses the estimate, so it does not jump with prices.",
       ].filter(Boolean).join("<br>")
     : "Track some production modules to start earning a rank.";
@@ -605,6 +643,24 @@ function renderOverview() {
   renderActionPlan();
   renderAttention();
   renderHistory();
+}
+
+// how many modules are not running right now (the estimate counts them all)
+function idleNote() {
+  const e = state.empire;
+  if (!e) return "";
+  let idle = 0, stalled = 0, paused = 0, total = 0;
+  for (const st of e.stations) for (const m of st.modules) {
+    total += m.count;
+    idle += m.idle || 0;
+    stalled += m.stalled || 0;
+    paused += m.paused || 0;
+  }
+  const parts = [];
+  if (idle) parts.push(`${idle} idle with no room for their output`);
+  if (stalled) parts.push(`${stalled} waiting for inputs`);
+  if (paused) parts.push(`${paused} paused`);
+  return parts.length ? `Right now ${parts.join(", ")}, out of ${total} modules.` : "";
 }
 
 // how old the loaded save is; a stale save means stale numbers everywhere
@@ -1026,7 +1082,7 @@ function stationDetail(st) {
   const moduleRows = groups.length
     ? groups.map(({ m, key, delta, base, f }) => `
       <div class="mod-row${m.stalled ? " is-stalled" : ""}">
-        <button type="button" class="net-name" data-action="inspect" data-id="${m.ware}">${W[m.ware].label}${METHOD_LABEL[m.method] ? ` <span class="method">${METHOD_LABEL[m.method]}</span>` : ""}${m.stalled ? ` <span class="tag is-short" title="Waiting for ${(m.short || []).filter((id) => W[id]).map((id) => W[id].label).join(", ") || "inputs"}">${m.stalled} stalled</span>` : ""}</button>
+        <button type="button" class="net-name" data-action="inspect" data-id="${m.ware}">${W[m.ware].label}${METHOD_LABEL[m.method] ? ` <span class="method">${METHOD_LABEL[m.method]}</span>` : ""}${m.idle ? ` <span class="tag is-warn" title="Storage for its output is full, so it waits until some is taken away">${m.idle} idle</span>` : ""}${m.paused ? ` <span class="tag is-plain">${m.paused} paused</span>` : ""}${m.stalled ? ` <span class="tag is-short" title="Waiting for ${(m.short || []).filter((id) => W[id]).map((id) => W[id].label).join(", ") || "inputs"}">${m.stalled} stalled</span>` : ""}</button>
         <span class="plan-step">
           <button type="button" class="icon-btn" data-action="plan" data-id="${escapeHTML(st.id)}" data-key="${key}" data-step="-1" aria-label="Plan one ${W[m.ware].label} module less">${icon("minus", 11)}</button>
           <span class="num">${base + delta}${delta ? `<span class="plan-delta ${delta > 0 ? "is-ok" : "is-short"}">${delta > 0 ? "+" : ""}${delta}</span>` : ""}</span>
@@ -2357,8 +2413,12 @@ function actionPlan() {
     }
   }
   const balance = computeBalance();
+  // a ware with idle makers is a distribution problem, not a production one:
+  // the "move it" item below covers it, so do not also suggest building more
+  const hasIdle = new Set();
+  for (const st of e.stations) for (const m of st.modules) if (m.idle) hasIdle.add(m.ware);
   for (const [w, v] of lost) {
-    if (W[w].isMined || v <= 0) continue;
+    if (W[w].isMined || v <= 0 || hasIdle.has(w)) continue;
     const row = balance.find((b) => b.id === w);
     const n = row && row.modulesNeeded ? row.modulesNeeded : 0;
     items.push({
@@ -2366,6 +2426,31 @@ function actionPlan() {
       title: n ? `Build ${n} more ${W[w].label} ${plural(n, "module")}` : `Get more ${W[w].label} to your factories`,
       why: `Factories are stalled waiting for ${W[w].label}.`,
       ware: w, label: "Plan chain",
+    });
+  }
+
+  // modules idle because their output has nowhere to go
+  const idleByWare = new Map();
+  for (const st of e.stations) {
+    for (const m of st.modules) {
+      if (!m.idle) continue;
+      const x = idleByWare.get(m.ware) || { idle: 0, value: 0, stations: new Set() };
+      x.idle += m.idle;
+      x.value += m.idle * Math.max(0, moduleValue(m.ware, m.method, m.efficiency));
+      x.stations.add(stationLabel(st));
+      idleByWare.set(m.ware, x);
+    }
+  }
+  const waitingFor = stalledWares();
+  for (const [w, x] of idleByWare) {
+    const waiting = waitingFor.get(w);
+    items.push({
+      impact: x.value,
+      title: waiting ? `Move ${W[w].label} to the stations waiting for it` : `Free up ${W[w].label} storage so ${x.idle} idle ${plural(x.idle, "module")} can run`,
+      why: waiting
+        ? `${x.idle} ${plural(x.idle, "module")} idle with full storage at ${[...x.stations].slice(0, 2).join(", ")}, while ${waiting.modules} ${plural(waiting.modules, "module")} wait for it elsewhere.`
+        : `Storage for it is full at ${[...x.stations].slice(0, 2).join(", ")}${x.stations.size > 2 ? " and more" : ""}: sell more, move it out, or add storage.`,
+      tab: "stations", label: "Stations",
     });
   }
 
@@ -3059,14 +3144,17 @@ function convertStation(s, i, counter) {
     // sunlight for solar and 100% for everything else
     const eff = m.efficiency != null ? m.efficiency : recipe.sunlight ? (sector ? sector.sunlight : 1) : 1;
     const key = `${mapped.ware}|${mapped.method}`;
-    if (!groups.has(key)) groups.set(key, { ware: mapped.ware, method: mapped.method, count: 0, effSum: 0, stalled: 0, short: new Set() });
+    if (!groups.has(key)) groups.set(key, { ware: mapped.ware, method: mapped.method, count: 0, effSum: 0, stalled: 0, idle: 0, paused: 0, short: new Set() });
     const g = groups.get(key);
     g.count++;
     g.effSum += eff;
     if (STALL_STATES.has(m.state)) {
       g.stalled++;
       for (const w of Object.keys(m.shortage || {})) g.short.add(w);
+    } else if (m.overflow) {
+      g.idle++; // made a batch and has nowhere to put it
     }
+    if (m.paused) g.paused++;
   }
 
   const storageCap = {};
@@ -3115,7 +3203,7 @@ function convertStation(s, i, counter) {
     overrides,
     modules: [...groups.values()].map((g) => ({
       ware: g.ware, method: g.method, count: g.count, efficiency: g.effSum / g.count,
-      stalled: g.stalled, short: [...g.short],
+      stalled: g.stalled, idle: g.idle, paused: g.paused, short: [...g.short],
     })),
   };
 }
