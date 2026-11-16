@@ -1601,7 +1601,8 @@ details[open] > summary.issue { background: var(--surface-2); }
 .price-row > .price-advice { display: block; color: var(--text-2); line-height: 1.45; }
 .price-advice .tag { margin-right: 6px; text-transform: capitalize; }
 .price-row.is-ok .price-advice,
-.price-row.is-none .price-advice { color: var(--text-3); }
+.price-row.is-none .price-advice,
+.price-row.is-internal .price-advice { color: var(--text-3); }
 
 /* ---------- supply and market opportunities ---------- */
 

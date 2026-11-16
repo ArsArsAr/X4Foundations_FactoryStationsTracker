@@ -270,6 +270,78 @@ function workforceGain(st) {
    Needs attention
 --------------------------------------------------------------------- */
 
+// Why a ware cannot leave a station whose modules are idle with full
+// storage: follows the trade log to whoever collects it. Built only from
+// routes, offers and storage, so it fits any layout: a central hub, ships
+// assigned per station, or plain NPC trade. null when there is nothing
+// specific to say.
+function idleOutlet(st, ware) {
+  const e = state.empire;
+  const routes = (e.flows && e.flows.routes) || [];
+  const label = W[ware].label;
+  const takers = new Map();
+  for (const r of routes) {
+    if (r.from === st.id && r.ware === ware && stationById(r.to)) takers.set(r.to, (takers.get(r.to) || 0) + r.perHour);
+  }
+  let hub = [...takers.keys()].map(stationById).find((h) => h && isHub(h));
+  if (!hub) hub = e.stations.find((h) => h !== st && h.offers && h.offers[ware] && h.offers[ware].buy && isHub(h));
+  if (hub) {
+    const name = stationLabel(hub);
+    const type = W[ware].storageType.toLowerCase();
+    const fill = storageFill(hub).find((f) => f.type === type);
+    const offer = (hub.offers || {})[ware] || {};
+    const carried = takers.get(hub.id) || 0;
+    if (fill && fill.fill >= STORAGE_WARN) {
+      const sellsOpen = offer.sell && (wareAccess(hub, ware, "sell") || {}).kind !== "internal";
+      const npc = e.market && e.market[ware] && e.market[ware].buy;
+      return `${name} collects it, but its ${type} storage is ${fmtPercent(Math.min(1, fill.fill))} full, so it cannot take more. ${sellsOpen
+        ? `It sells ${label} at ${fmtPrice(Math.round(offer.sell.price))}${npc ? ` and NPC buyers pay about ${fmtPrice(Math.round(npc.med))}` : ""}. Selling faster there frees the room, or add ${type} storage to the hub.`
+        : `Free room there: sell more from the hub, ship more out, or add ${type} storage.`}`;
+    }
+    if (!offer.buy) return `${name} runs your logistics but has no buy offer for ${label} right now, so its ships do not collect it. Add one at the hub (your faction only is fine).`;
+    if (!(offer.buy.amount > 0)) {
+      // the offer is there but wants nothing more: the hub holds as much as it is set to
+      return `${name} already holds as much ${label} as it is set to keep (${Math.round((hub.cargo || {})[ware] || 0).toLocaleString("en-US")} in stock), so its ships stop collecting. Raise the hub's stock limit for ${label}, or sell more of it from the hub.`;
+    }
+    const home = (e.flows.homes || {})[hub.id];
+    const w = W[ware];
+    const crew = !home ? 0 : w.isMined ? (w.storageType === "Solid" ? home.haulSolid : home.haulLiquid) : home.traders - home.haulSolid - home.haulLiquid;
+    const kind = w.isMined ? (w.storageType === "Solid" ? "solid mining ships set to trade" : "gas mining ships set to trade") : "freighters";
+    return carried
+      ? `${name}'s ships take about ${fmtRate(carried)} per hour from here, which does not keep up. ${crew ? `It has ${crew} ${kind}; assign more to it.` : `Assign ${kind} to it.`}`
+      : `${name} buys ${label}, but none of its ships collected it from here in the trade log. Assign ${kind} to ${name}.`;
+  }
+  if (takers.size) {
+    const total = [...takers.values()].reduce((s, v) => s + v, 0);
+    return `Your ships take about ${fmtRate(total)} per hour from here to ${stationNames([...takers.keys()].map(stationById))}, which does not keep up. Assign more traders, or sell the rest to NPCs.`;
+  }
+  return null;
+}
+
+// Wares locked to your own ships with nowhere to go: no station of yours
+// uses them and none sells them on to NPCs. Usually a rule set on one
+// station too many, such as the hub that was meant to sell.
+function deadEnds() {
+  const e = state.empire;
+  const nets = new Map(e.stations.map((st) => [st, stationNet(st)]));
+  const has = (st, ware) => (nets.get(st).get(ware) || 0) > 1e-6 || ((st.cargo || {})[ware] || 0) > 0 || !!((st.offers || {})[ware] || {}).sell;
+  const out = [];
+  for (const ware of Object.keys(W)) {
+    const holders = [], openSellers = [];
+    let used = false;
+    for (const st of e.stations) {
+      if ((nets.get(st).get(ware) || 0) < -1e-6 || (st.buildsShips && ((st.offers || {})[ware] || {}).buy)) used = true;
+      if (!has(st, ware)) continue;
+      if ((wareAccess(st, ware, "sell") || {}).kind === "internal") holders.push(st);
+      else openSellers.push(st);
+    }
+    if (!holders.length || used || openSellers.length) continue;
+    const value = holders.reduce((s, st) => s + Math.max(0, nets.get(st).get(ware) || 0), 0) * W[ware].price.avg;
+    out.push({ ware, holders, value });
+  }
+  return out.sort((a, b) => b.value - a.value);
+}
+
 function attentionIssues() {
   const e = state.empire;
   if (!e) return [];
@@ -359,6 +431,14 @@ function attentionIssues() {
         }
       }
     }
+    for (const d of deadEnds()) {
+      issues.push({
+        sev: 2, st: null, kind: "deadend", ware: d.ware, holders: d.holders,
+        title: `${W[d.ware].label} can only go to your own stations, and none of them use it`,
+        sub: `A trade rule lets only your ships take it at ${stationNames(d.holders)}, no station of yours uses it, and none sells it to NPCs, so it can only pile up. Open the rule for it where it should be sold (often your hub), or build something that uses it. If you are stockpiling it on purpose, ignore this.`,
+        weight: d.value,
+      });
+    }
     for (const r of internalRows()) {
       if (r.gain < 50e3) continue;
       issues.push({
@@ -373,7 +453,7 @@ function attentionIssues() {
   return issues.sort((a, b) => b.sev - a.sev || b.weight - a.weight);
 }
 
-const ISSUE_ICON = { full: "warning", fleet: "clock", hub: "warning", stalled: "warning", runway: "clock", storage: "warning", workforce: "trend-up", mining: "warning", internal: "trend-up" };
+const ISSUE_ICON = { deadend: "warning", full: "warning", fleet: "clock", hub: "warning", stalled: "warning", runway: "clock", storage: "warning", workforce: "trend-up", mining: "warning", internal: "trend-up" };
 
 const SEV_LABEL = { 3: "Urgent", 2: "Soon", 1: "Worth a look" };
 
@@ -406,6 +486,10 @@ function attentionGroups() {
       add("storage", { sev: 2, kind: "storage" }).items.push(i);
     } else if (i.kind === "workforce") {
       add("workforce", { sev: 1, kind: "workforce" }).items.push(i);
+    } else if (i.kind === "deadend") {
+      const g = add(`deadend:${i.ware}`, { sev: 2, kind: "deadend", ware: i.ware, title: i.title, sub: i.sub });
+      g.weight += i.weight;
+      for (const st of i.holders) g.items.push({ st, title: `Only your ships may take ${W[i.ware].label} here` });
     } else if (i.kind === "internal") {
       add("internal", { sev: 1, kind: "internal", tab: "supply" }).items.push(i);
     } else if (i.kind === "fleet") {
@@ -457,7 +541,13 @@ function attentionGroups() {
       const idle = g.items.reduce((s, i) => s + i.idle, 0);
       const makers = [...new Set(g.items.map((i) => stationLabel(i.st)))];
       g.title = `${idle} ${label} ${plural(idle, "module")} idle: no room for output`;
-      g.sub = `Storage for ${label} is full at ${makers.slice(0, 2).join(", ")}${makers.length > 2 ? " and more" : ""}. Sell more (a lower price, or an offer open to everyone), move it out with traders, or give it more storage space.`;
+      const where = `${makers.slice(0, 2).join(", ")}${makers.length > 2 ? " and more" : ""}`;
+      const internalOnly = g.items.every((i) => i.st && (wareAccess(i.st, g.ware, "sell") || {}).kind === "internal");
+      const biggest = g.items.filter((i) => i.st).sort((a, b) => b.idle - a.idle)[0];
+      const why = biggest ? idleOutlet(biggest.st, g.ware) : null;
+      g.sub = `Storage for ${label} is full at ${where}. ${why || (internalOnly
+        ? "A trade rule lets only your own ships buy it there, so it waits for your stations that use it: give it more of your traders, add a station that uses it, or more storage space."
+        : "Sell more (a lower price, or an offer open to everyone), move it out with traders, or give it more storage space.")}`;
     } else if (g.kind === "runway") {
       const wares = new Set(g.items.map((i) => i.ware));
       g.title = `Low stock of ${wares.size} ${plural(wares.size, "ware")} at ${at}`;
@@ -1107,7 +1197,11 @@ function stationDetail(st) {
         ? `<span class="num ${r.hours < RUNWAY_WARN_HOURS ? "is-short" : "dim"}" title="${Math.round(r.stock).toLocaleString("en-US")} in stock">${r.stock ? fmtHours(r.hours) : "empty"}</span>`
         : `<span class="num dim" title="In stock">${Math.round(stock(id)).toLocaleString("en-US")}</span>`;
     }
-    return `<button type="button" class="link-row flow-row" data-action="inspect" data-id="${id}"><span class="name">${W[id].label}</span><span class="num">${fmtRate(Math.abs(v))}/h</span>${extra}</button>`;
+    const access = wareAccess(st, id, inbound ? "buy" : "sell");
+    const ruleTag = access
+      ? ` <span class="tag is-plain" title="Trade rule ${escapeHTML(`“${access.rule}”`)}: ${access.kind === "internal" ? "only your own ships trade it here" : "some factions may not trade it here"}">${access.kind === "internal" ? "yours only" : "limited"}</span>`
+      : "";
+    return `<button type="button" class="link-row flow-row" data-action="inspect" data-id="${id}"><span class="name">${W[id].label}${ruleTag}</span><span class="num">${fmtRate(Math.abs(v))}/h</span>${extra}</button>`;
   };
   const flowList = (list, inb) => list.length ? list.map((x) => flowRow(x, inb)).join("") : `<p class="quiet-note">Nothing.</p>`;
 
@@ -1171,17 +1265,22 @@ function priceAdvice() {
   }
   // the player's price per ware: mean over stations that trade it
   const mine = { sell: new Map(), buy: new Map() };
+  // offers only your own ships may take: NPC prices do not apply to them
+  const internal = { sell: new Map(), buy: new Map() };
   for (const st of e.stations) {
     for (const [ware, sides] of Object.entries(st.offers || {})) {
       if (!W[ware]) continue;
       for (const side of ["sell", "buy"]) {
         const o = sides[side];
         if (!o || !(o.price > 0)) continue;
-        const cur = mine[side].get(ware) || { sum: 0, n: 0, stations: [] };
+        const access = wareAccess(st, ware, side);
+        const into = access && access.kind === "internal" ? internal : mine;
+        const cur = into[side].get(ware) || { sum: 0, n: 0, stations: [] };
         cur.sum += o.price;
         cur.n++;
         cur.stations.push(stationLabel(st));
-        mine[side].set(ware, cur);
+        if (access && access.kind === "limited") cur.limited = true;
+        into[side].set(ware, cur);
       }
     }
   }
@@ -1241,7 +1340,16 @@ function priceAdvice() {
           row.text = "In line with the market.";
         }
       }
+      if (m.limited && row.kind !== "none") row.text += " A trade rule shuts some factions out, so fewer NPCs can take it.";
       rows.push(row);
+    }
+    for (const [ware, m] of internal[side]) {
+      if (mine[side].has(ware)) continue; // other stations trade it openly: advice above covers it
+      rows.push({
+        side, ware, own: m.sum / m.n, rivals: null, partners: null, perHour: 0, stations: m.stations,
+        kind: "internal", effect: 0, target: null,
+        text: "Only your own ships may trade it here (trade rule), so NPC prices do not apply. The price only moves credits between your stations.",
+      });
     }
   }
   return rows;
@@ -1284,7 +1392,7 @@ function renderPrices() {
           <span><span class="num">${fmtPrice(Math.round(r.own))}</span><span class="price-sub">${r.stations.length} ${plural(r.stations.length, "station")}${r.perHour ? `, ${fmtRate(r.perHour)}/h` : ""}</span></span>
           <span>${fmtSide(best, "typical")}${best && best.sector ? `<span class="price-sub" title="${escapeHTML(factionLabel(best.owner))}">${escapeHTML(best.sector)}</span>` : ""}</span>
           <span>${fmtSide(other, "typical")}</span>
-          <span class="price-advice">${r.kind === "raise" || r.kind === "lower" ? `<span class="tag ${r.effect > 0 ? "is-ok" : "is-plain"}">${r.kind}</span>` : ""}${escapeHTML(r.text)}</span>
+          <span class="price-advice">${r.kind === "raise" || r.kind === "lower" ? `<span class="tag ${r.effect > 0 ? "is-ok" : "is-plain"}">${r.kind}</span>` : r.kind === "internal" ? `<span class="tag is-plain">yours only</span>` : ""}${escapeHTML(r.text)}</span>
           <span class="num ${r.effect > 0 ? "is-ok" : "dim"}">${r.effect > 0 ? "+" + fmtCredits(r.effect) + " Cr" : ""}</span>
         </div>`;
       }).join("")}
@@ -2478,7 +2586,8 @@ function actionPlan() {
   for (const st of e.stations) {
     for (const m of st.modules) {
       if (!m.idle) continue;
-      const x = idleByWare.get(m.ware) || { idle: 0, value: 0, stations: new Set() };
+      const x = idleByWare.get(m.ware) || { idle: 0, value: 0, stations: new Set(), top: null };
+      if (!x.top || m.idle > x.top.idle) x.top = { st, idle: m.idle };
       x.idle += m.idle;
       x.value += m.idle * Math.max(0, moduleValue(m.ware, m.method, m.efficiency));
       x.stations.add(stationLabel(st));
@@ -2493,7 +2602,7 @@ function actionPlan() {
       title: waiting ? `Move ${W[w].label} to the stations waiting for it` : `Free up ${W[w].label} storage so ${x.idle} idle ${plural(x.idle, "module")} can run`,
       why: waiting
         ? `${x.idle} ${plural(x.idle, "module")} idle with full storage at ${[...x.stations].slice(0, 2).join(", ")}, while ${waiting.modules} ${plural(waiting.modules, "module")} wait for it elsewhere.`
-        : `Storage for it is full at ${[...x.stations].slice(0, 2).join(", ")}${x.stations.size > 2 ? " and more" : ""}: sell more, move it out, or add storage.`,
+        : `Storage for it is full at ${[...x.stations].slice(0, 2).join(", ")}${x.stations.size > 2 ? " and more" : ""}. ${idleOutlet(x.top.st, w) || "Sell more, move it out, or add storage."}`,
       tab: "stations", label: "Stations",
     });
   }
@@ -3172,7 +3281,48 @@ async function openShareCard() {
    Save import
 --------------------------------------------------------------------- */
 
-function convertStation(s, i, counter) {
+// Who may trade with a station, per ware and side, from the save's trade
+// rules. A rule is a list of factions that are either the only ones allowed
+// or the ones shut out; its name is whatever the player typed, so it is
+// never looked at. "internal": only your own ships. "limited": some NPC
+// factions are shut out. Wares with no restriction are left out.
+function resolveTradeRules(raw, global) {
+  const rules = (global && global.rules) || {};
+  const defaults = (global && global.defaults) || {};
+  const kindOf = (id) => {
+    if (id === -1) return { kind: "open" };
+    if (!(id > 0)) return null; // "use station / global setting"
+    const r = rules[id];
+    if (!r) return null;
+    const internal = r.whitelist && r.factions.every((f) => f === "player");
+    return { kind: internal ? "internal" : "limited", rule: r.name };
+  };
+  const t = raw || {};
+  const base = {};
+  for (const side of ["buy", "sell"]) base[side] = kindOf(t[side]) || kindOf(defaults[side]) || { kind: "open" };
+  const out = { buy: base.buy.kind === "open" ? null : base.buy, sell: base.sell.kind === "open" ? null : base.sell, wares: {} };
+  for (const [w, v] of Object.entries(t.wares || {})) {
+    if (!W[w]) continue;
+    const res = {};
+    for (const side of ["buy", "sell"]) {
+      const k = kindOf(v[side]);
+      if (k) res[side] = k.kind === "open" ? null : k;
+    }
+    if (Object.keys(res).length) out.wares[w] = res;
+  }
+  return out;
+}
+
+// the trade restriction on one ware at a station: null when anyone may trade
+function wareAccess(st, ware, side) {
+  const t = st.tradeRules;
+  if (!t) return null;
+  const w = t.wares[ware];
+  if (w && side in w) return w[side];
+  return t[side] || null;
+}
+
+function convertStation(s, i, counter, rules) {
   const sector = SECTORS[s.sector] || null;
   const groups = new Map();
   let workforceNeed = 0;
@@ -3245,6 +3395,7 @@ function convertStation(s, i, counter) {
     cargo,
     offers,
     overrides,
+    tradeRules: resolveTradeRules(s.tradeRules, rules),
     modules: [...groups.values()].map((g) => ({
       ware: g.ware, method: g.method, count: g.count, efficiency: g.effSum / g.count,
       stalled: g.stalled, idle: g.idle, paused: g.paused, short: [...g.short],
@@ -3321,7 +3472,7 @@ async function importSave(file) {
     }
 
     const counter = { skipped: 0 };
-    const converted = stations.map((s, i) => convertStation(s, i, counter));
+    const converted = stations.map((s, i) => convertStation(s, i, counter, result.tradeRules));
 
     // built counts now come from the save; "I have a source" ticks on mined wares stay
     for (const id of [...state.moduleCounts.keys()]) if (!W[id].isMined) state.moduleCounts.delete(id);

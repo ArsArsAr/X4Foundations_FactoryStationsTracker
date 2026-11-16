@@ -245,3 +245,74 @@ test("miner rates are measured per ship size from your own ships", () => {
   assert.equal(text, "About 3 L or 9 M solid miners");
   assert.equal(get("minerSizes")({ more: 1, bySize: [] }), "about 1 more miner", "falls back to the fleet average");
 });
+
+test("trade rules are read by what they do, not by their name", () => {
+  const resolve = get("resolveTradeRules");
+  const access = get("wareAccess");
+  const global = {
+    rules: {
+      5: { name: "my own stuff", factions: ["player"], whitelist: true },
+      6: { name: "Restrict all factions but mine", factions: ["xenon", "khaak"], whitelist: false },
+      7: { name: "friends", factions: ["player", "argon"], whitelist: true },
+    },
+    defaults: {},
+  };
+  const st = { tradeRules: resolve({ buy: null, sell: 7, wares: { graphene: { sell: 5 }, hullparts: { sell: -1 }, ore: { buy: 6 } } }, global) };
+  assert.equal(access(st, "graphene", "sell").kind, "internal", "a whitelist of only you is internal, whatever its name");
+  assert.equal(access(st, "ore", "buy").kind, "limited", "a blacklist is never internal, even named like one");
+  assert.equal(access(st, "hullparts", "sell"), null, "-1 is no restriction for that ware");
+  assert.equal(access(st, "energycells", "sell").kind, "limited", "other wares follow the station rule");
+  assert.equal(access(st, "energycells", "buy"), null);
+  const viaDefault = { tradeRules: resolve({ buy: -3, sell: null, wares: {} }, { rules: global.rules, defaults: { buy: 5, sell: -2 } }) };
+  assert.equal(access(viaDefault, "graphene", "buy").kind, "internal", "the empire default applies when the station has none");
+  assert.equal(access(viaDefault, "graphene", "sell"), null);
+});
+
+// a tiny empire: a graphene factory, optionally a hub and a consumer
+function miniEmpire({ factoryRule = null, hub = null, consumer = false, routes = [] } = {}) {
+  const resolve = get("resolveTradeRules");
+  const rules = { rules: { 1: { name: "anything at all", factions: ["player"], whitelist: true } }, defaults: {} };
+  const mk = (id, name, modules, extra = {}) => ({
+    id, name, code: id, modules, storage: [], storageCap: { container: 1e6 }, cargo: {}, offers: {}, upkeep: [],
+    tradeRules: resolve(extra.rules || {}, rules), ...extra,
+  });
+  const graphene = { ware: "graphene", method: W.graphene.mainMethod, count: 4, efficiency: 1, stalled: 0, idle: 4, paused: 0, short: [] };
+  const stations = [mk("FAC", "Graphene Factory", [graphene], { rules: factoryRule ? { wares: { graphene: { sell: factoryRule } } } : {} })];
+  if (hub) stations.push(mk("HUB", "Depot", [], { storage: ["a", "b", "c"], offers: { graphene: hub.offers || {} }, rules: hub.rules || {} }));
+  if (consumer) {
+    const uses = Object.keys(W).find((id) => W[id].recipes[W[id].mainMethod].inputs.some((i) => i.wareID === "graphene"));
+    stations.push(mk("USE", "User", [{ ware: uses, method: W[uses].mainMethod, count: 2, efficiency: 1, stalled: 0, idle: 0, paused: 0, short: [] }]));
+  }
+  const state = get("state");
+  state.empire = { stations, market: {}, flows: { routes, homes: { HUB: { traders: 3, haulSolid: 0, haulLiquid: 0 } } } };
+  return stations;
+}
+
+test("idle advice with no hub and no rules keeps the general advice", () => {
+  const [fac] = miniEmpire();
+  assert.equal(get("idleOutlet")(fac, "graphene"), null);
+  assert.equal(get("deadEnds")().length, 0, "nothing is locked, so nothing is a dead end");
+});
+
+test("idle advice follows the ware to a hub and names what is wrong there", () => {
+  const route = [{ from: "FAC", to: "HUB", ware: "graphene", perHour: 100 }];
+  let [fac] = miniEmpire({ hub: { offers: { buy: { price: 1, amount: 0 }, sell: { price: 2 } } }, routes: route });
+  assert.match(get("idleOutlet")(fac, "graphene"), /Depot already holds as much Graphene as it is set to keep/);
+  [fac] = miniEmpire({ hub: { offers: { buy: { price: 1, amount: 500 } } }, routes: route });
+  assert.match(get("idleOutlet")(fac, "graphene"), /Depot's ships take about .* It has 3 freighters/);
+  [fac] = miniEmpire({ hub: { offers: { buy: { price: 1, amount: 500 } } }, routes: [{ from: "HUB", to: "npc", ware: "graphene", perHour: 50 }] });
+  assert.match(get("idleOutlet")(fac, "graphene"), /none of its ships collected it/);
+  [fac] = miniEmpire({ hub: { offers: {} }, routes: route });
+  assert.match(get("idleOutlet")(fac, "graphene"), /no buy offer for Graphene/);
+});
+
+test("a ware locked to your ships is a dead end only when nothing of yours uses or sells it", () => {
+  miniEmpire({ factoryRule: 1 });
+  assert.equal(get("deadEnds")().map((d) => d.ware).join(), "graphene");
+  miniEmpire({ factoryRule: 1, consumer: true });
+  assert.equal(get("deadEnds")().length, 0, "one of your stations uses it");
+  miniEmpire({ factoryRule: 1, hub: { offers: { sell: { price: 2 } } } });
+  assert.equal(get("deadEnds")().length, 0, "the hub sells it on to NPCs");
+  miniEmpire({ factoryRule: 1, hub: { offers: { sell: { price: 2 } }, rules: { sell: 1 } } });
+  assert.equal(get("deadEnds")()[0].holders.map((s) => s.id).join(), "FAC,HUB", "the hub locked too: nowhere to go");
+});

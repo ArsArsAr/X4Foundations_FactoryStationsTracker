@@ -30,6 +30,9 @@
     return v === null || UNSAFE_KEYS.has(v) ? null : v;
   };
 
+  // a trade rule id, or null when the attribute is missing or not a number
+  const ruleId = (v) => (v === null || v === "" || !Number.isFinite(Number(v)) ? null : Number(v));
+
   const unescapeXml = (s) =>
     s.replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
 
@@ -51,8 +54,13 @@
     let current = null;    // nearest station entry (player or NPC) on the stack
     let sector = null;     // nearest sector macro on the stack
     let inShip = false;    // nearest ship sits between us and the station
-    let block = null;      // "cargo" | "shortage" | "override" while inside one
+    let block = null;      // "cargo" | "shortage" | "override" | "traderules" while inside one
     const saveInfo = {};
+    // the player's trade rules: id -> { name, factions, whitelist }, and the
+    // empire-wide default rule per trade type. Rules are judged by their
+    // factions list, never by their name, which the player can type freely.
+    const tradeRules = { rules: Object.create(null), defaults: {} };
+    let faction = null;    // the <faction id> block being read, outside the universe
 
     function recompute() {
       current = null;
@@ -113,6 +121,9 @@
               cargo: {},        // ware -> amount in stock
               offers: [],       // { side, ware, price, amount, desired } price in Cr
               overrides: {},    // ware -> { buy, sell } manual prices in Cr
+              // trade rule ids: >0 a rule, -1 no restriction, anything else
+              // (or missing) falls back to the station, then the empire default
+              tradeRules: { buy: null, sell: null, wares: {} },
             };
             stations.push(entry.station);
           } else {
@@ -209,6 +220,20 @@
       }
 
       if (!current) {
+        if (s.startsWith("<faction id=")) faction = attr(s, "id");
+        else if (s.startsWith("<traderule id=") && attr(s, "owner") === "player") {
+          const id = Number(attr(s, "id"));
+          if (id > 0) {
+            tradeRules.rules[id] = {
+              name: unescapeXml(attr(s, "name") || ""),
+              factions: (attr(s, "factions") || "").split(/\s+/).filter(Boolean),
+              whitelist: attr(s, "allow") === "1",
+            };
+          }
+        } else if (s.startsWith("<traderule type=") && faction === "player") {
+          const type = attr(s, "type");
+          if ((type === "buy" || type === "sell") && ruleId(attr(s, "traderule")) !== null) tradeRules.defaults[type] = ruleId(attr(s, "traderule"));
+        }
         if (s.startsWith("<info ") || s.startsWith("<save ") || s.startsWith("<game ")) {
           for (const k of ["name", "date", "version", "build", "original", "time"]) {
             const v = attr(s, k);
@@ -242,8 +267,14 @@
 
       if (s === "<cargo>") {
         if (top() && top().storage) block = "cargo";
-      } else if (s === "</cargo>" || s === "</shortage>" || s === "</override>") {
+      } else if (s === "</cargo>" || s === "</shortage>" || s === "</override>" || s === "</traderules>") {
         block = null;
+      } else if (s.startsWith("<traderules") && top() === current) {
+        // the station's own rule, and a list of per-ware exceptions
+        const buy = ruleId(attr(s, "buy")), sell = ruleId(attr(s, "sell"));
+        if (buy !== null) st.tradeRules.buy = buy;
+        if (sell !== null) st.tradeRules.sell = sell;
+        if (!s.endsWith("/>")) block = "traderules";
       } else if (s === "<shortage>") {
         if (top() && top().module) block = "shortage";
       } else if (s === "<override>") {
@@ -262,6 +293,8 @@
           const buy = Number(attr(s, "buy"));
           const sell = Number(attr(s, "sell"));
           st.overrides[ware] = { buy: Number.isFinite(buy) ? buy : null, sell: Number.isFinite(sell) ? sell : null };
+        } else if (block === "traderules") {
+          st.tradeRules.wares[ware] = { buy: ruleId(attr(s, "buy")), sell: ruleId(attr(s, "sell")) };
         }
       } else if (s.startsWith("<production ") && top() && top().module) {
         top().module.state = attr(s, "state");
@@ -348,7 +381,7 @@
     return {
       line,
       result: () => ({
-        stations, market, ships, trades, missions, blueprints, info: saveInfo,
+        stations, market, ships, trades, missions, blueprints, tradeRules, info: saveInfo,
         log: { start: Number.isFinite(eco.start) ? eco.start : null, end: eco.end || null },
       }),
     };

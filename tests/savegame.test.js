@@ -13,6 +13,22 @@ const SAVE = `<?xml version="1.0" encoding="UTF-8"?>
 <save name="Test &amp; save" date="1790000000"/>
 <game id="X4" version="900" build="1" time="7200"/>
 </info>
+<traderules>
+<traderule id="1" owner="player" name="Only mine &amp; co" factions="player" allow="1"/>
+<traderule id="2" owner="player" name="No pirates" factions="scaleplate yaki" allow="0"/>
+</traderules>
+<factions>
+<faction id="argon">
+<traderules>
+<traderule type="buy" traderule="1"/>
+</traderules>
+</faction>
+<faction id="player">
+<traderules>
+<traderule type="sell" traderule="2"/>
+</traderules>
+</faction>
+</factions>
 <universe>
 <component class="galaxy" macro="xu_ep2_universe_macro" id="[0x1]">
 <component class="sector" macro="cluster_01_sector001_macro" id="[0x3]">
@@ -54,6 +70,12 @@ const SAVE = `<?xml version="1.0" encoding="UTF-8"?>
 <ware ware="hullparts" buy="0" sell="250"/>
 </override>
 </prices>
+<traderules>
+<wares>
+<ware ware="graphene" sell="1"/>
+<ware ware="energycells" buy="-1"/>
+</wares>
+</traderules>
 <workforces lasttime="1">
 <workforce race="teladi" amount="60">
 </workforce>
@@ -71,6 +93,7 @@ const SAVE = `<?xml version="1.0" encoding="UTF-8"?>
 </component>
 </component>
 <component class="station" macro="station_arg_tradestation_01_macro" code="NPC-001" owner="argon" id="[0x30]">
+<traderules buy="-3" sell="-3" supplies="-3"/>
 <trade id="[0x6]" buyer="[0x30]" ware="hullparts" price="21000" amount="50" desired="50" flags=""/>
 <trade id="[0x7]" seller="[0x30]" ware="hullparts" price="19000" amount="40" flags=""/>
 <trade id="[0x8]" seller="[0x30]" ware="hullparts" price="100" amount="40" flags="virtual"/>
@@ -242,4 +265,15 @@ test("reads modules that are idle because their output has no room, and paused o
   assert.equal(graphene.paused, true);
   assert.equal(st.modules[0].overflow, false);
   assert.deepEqual(st.cargo, { energycells: 100 }, "the overflow ware is not stock");
+});
+
+test("reads trade rules: definitions, the player's defaults and per-ware station rules", async () => {
+  const { tradeRules, stations } = await scan(SAVE);
+  assert.deepEqual({ ...tradeRules.rules[1] }, { name: "Only mine & co", factions: ["player"], whitelist: true });
+  assert.equal(tradeRules.rules[2].whitelist, false);
+  assert.deepEqual(tradeRules.defaults, { sell: 2 }, "another faction's defaults are not the player's");
+  const t = stations[0].tradeRules;
+  assert.deepEqual({ ...t.wares.graphene }, { buy: null, sell: 1 });
+  assert.deepEqual({ ...t.wares.energycells }, { buy: -1, sell: null });
+  assert.equal(t.buy, null, "an NPC station's rule is not read into yours");
 });
