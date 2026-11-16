@@ -341,7 +341,7 @@ function attentionIssues() {
       issues.push({
         sev: r.stalled ? 3 : 2, st: null, kind: "mining", tab: "supply", ware: r.ware,
         title: `${W[r.ware].label} supply covers ${fmtPercent(r.cover)} of what you use`,
-        sub: `${r.stalled ? `${r.stalled} ${plural(r.stalled, "module")} stalled waiting for it. ` : ""}${r.more ? `About ${r.more} more ${plural(r.more, "miner")} would close the gap.` : ""}`.trim(),
+        sub: `${r.stalled ? `${r.stalled} ${plural(r.stalled, "module")} stalled waiting for it. ` : ""}${r.more ? `${minerSizes(r, true)} would close the gap.` : ""}`.trim(),
         weight: 1e12 * (1 - r.cover), // ahead of single stalls: this is usually their cause
       });
     }
@@ -1333,6 +1333,12 @@ function showSections(panel, on) {
   document.querySelectorAll(`.tab-panel[data-panel="${panel}"] > section.section-gap`).forEach((s) => { s.hidden = !on; });
 }
 
+// a ship's size class from its model name: ship_arg_m_miner_... -> "M"
+function shipSize(macro) {
+  const token = (macro || "").split("_")[2] || "";
+  return /^(xs|s|m|l|xl)$/.test(token) ? token.toUpperCase() : null;
+}
+
 function summariseFlows(result, converted) {
   const { trades, ships, info, log } = result;
   if (!trades || !trades.length) return null;
@@ -1379,9 +1385,15 @@ function summariseFlows(result, converted) {
       f.mined += v;
       f.miners.add(seller);
       const t = W[ware].storageType;
-      byType[t] = byType[t] || { volume: 0, miners: new Set() };
+      byType[t] = byType[t] || { volume: 0, miners: new Set(), sizes: {} };
       byType[t].volume += v * W[ware].volume;
       byType[t].miners.add(seller);
+      const size = shipSize(shipById.get(seller).macro);
+      if (size) {
+        const z = byType[t].sizes[size] || (byType[t].sizes[size] = { volume: 0, miners: new Set() });
+        z.volume += v * W[ware].volume;
+        z.miners.add(seller);
+      }
     } else if (s === "npc" && b !== "npc") {
       f.bought += v;
       f.boughtCr += v * price;
@@ -1410,7 +1422,14 @@ function summariseFlows(result, converted) {
     else minerCount[liquid ? "haulLiquid" : "haulSolid"]++;
   }
   const perMiner = {}; // storage type -> volume one miner brings in per hour
-  for (const [t, x] of Object.entries(byType)) perMiner[t] = x.volume / hours / x.miners.size;
+  const perMinerSize = {}; // storage type -> size -> { rate, miners }, from your own ships of that size
+  for (const [t, x] of Object.entries(byType)) {
+    perMiner[t] = x.volume / hours / x.miners.size;
+    perMinerSize[t] = {};
+    for (const [size, z] of Object.entries(x.sizes)) {
+      perMinerSize[t][size] = { rate: z.volume / hours / z.miners.size, miners: z.miners.size };
+    }
+  }
   const actual = { revenue: npcRevenue / hours, cost: npcCost / hours, stations: {} };
   for (const [id, x] of Object.entries(books)) {
     actual.stations[id] = { sold: x.sold / hours, bought: x.bought / hours, soldNpc: x.soldNpc / hours, boughtNpc: x.boughtNpc / hours };
@@ -1424,7 +1443,7 @@ function summariseFlows(result, converted) {
     if (r.from === "npc" && ownStations.has(r.to)) f.bought += r.perHour;
     else if (r.to === "npc" && ownStations.has(r.from)) f.sold += r.perHour;
   }
-  return { hours, wares, minerCount, perMiner, actual, ...traced };
+  return { hours, wares, minerCount, perMiner, perMinerSize, actual, ...traced };
 }
 
 // empire-wide units per hour your stations use (modules at full speed, plus workers)
@@ -1434,6 +1453,16 @@ function empireNeed() {
     for (const [w, n] of stationNet(st)) need.set(w, (need.get(w) || 0) + n);
   }
   return need;
+}
+
+// "about 8 L or 20 M miners"; falls back to the fleet average when there
+// are not enough ships of a size to measure
+function minerSizes(r, sentence = false, kind = "") {
+  const k = kind ? `${kind} ` : "";
+  if (!r.bySize || !r.bySize.length) return `${sentence ? "About" : "about"} ${r.more} more ${k}${plural(r.more, "miner")}`;
+  const parts = r.bySize.map((x) => `${x.n} ${x.size}`);
+  const list = parts.length > 1 ? `${parts.slice(0, -1).join(", ")} or ${parts[parts.length - 1]}` : parts[0];
+  return `${sentence ? "About" : "about"} ${list} ${k}${plural(r.bySize[r.bySize.length - 1].n, "miner")}`;
 }
 
 function miningRows() {
@@ -1454,6 +1483,8 @@ function miningRows() {
   }
   // what one miner of the right type brings in per hour if it mined only this
   const perMinerVolume = e.flows.perMiner || {};
+  const perSize = e.flows.perMinerSize || {};
+  const SIZE_ORDER = ["XL", "L", "M", "S", "XS"];
 
   return Object.values(W)
     .filter((w) => w.isMined)
@@ -1469,6 +1500,13 @@ function miningRows() {
         perMiner, stalled: stalledFor.get(w.id) || 0, stalledAt: [...(stalledAt.get(w.id) || [])],
         more: perMiner && gap > 0 ? Math.ceil(gap / perMiner) : 0,
         moreToStopBuying: perMiner && ownGap > 0 ? Math.ceil(ownGap / perMiner) : 0,
+        // the same gap in miners of each size you run: "about 8 L or 20 M"
+        bySize: gap > 0 && w.volume
+          ? Object.entries(perSize[w.storageType] || {})
+            .filter(([, z]) => z.miners >= 2 && z.rate > 0)
+            .sort((a, b) => SIZE_ORDER.indexOf(a[0]) - SIZE_ORDER.indexOf(b[0]))
+            .map(([size, z]) => ({ size, n: Math.ceil(gap / (z.rate / w.volume)), perShip: z.rate / w.volume, ships: z.miners }))
+          : [],
       };
     })
     .filter((r) => r.need > 0 || r.mined > 0 || r.bought > 0)
@@ -1528,14 +1566,20 @@ function renderSupply() {
   note.innerHTML = `From the trade log in your save: the last <strong class="num">${Math.round(f.hours)}</strong> game hours.
     "Needed" is what your stations use with every module running, plus what their workers eat. You have ${f.minerCount.solid} solid and ${f.minerCount.liquid} gas ${plural(f.minerCount.liquid, "miner")} mining${f.minerCount.haulSolid || f.minerCount.haulLiquid ? `, plus ${f.minerCount.haulSolid + f.minerCount.haulLiquid} mining ships set to trade, which haul ore and gas between stations and are not counted as mining` : ""}.
     Miners switch between wares.
-    Extra miners are counted at what one of yours brings in per hour when it mines only that ware.`;
+    Extra miners are counted per ship size, at what one of your miners of that size brings in per hour when it mines only that ware.`;
 
   const rows = miningRows();
   mining.innerHTML = rows.length
     ? `<div class="sup-row sup-head"><span>Ware</span><span>${term("Needed", "needed")}</span><span>${term("Your miners", "miners")}</span><span>${term("Bought", "bought")}</span><span>${term("Covered", "covered")}</span><span>What to do</span></div>
       ${rows.map((r) => {
         let advice;
-        if (r.more) advice = `<span class="tag ${r.stalled ? "is-short" : "is-warn"}">+${r.more} ${plural(r.more, "miner")}</span>`;
+        if (r.more) {
+          const label = r.bySize.length ? `${r.bySize.map((x) => `+${x.n} ${x.size}`).join(" or ")} ${plural(r.bySize[r.bySize.length - 1].n, "miner")}` : `+${r.more} ${plural(r.more, "miner")}`;
+          const why = r.bySize.length
+            ? r.bySize.map((x) => `One of your ${x.size} miners brings in about ${fmtRate(x.perShip)} ${W[r.ware].label} per hour (measured on ${x.ships} ships)`).join(". ")
+            : "Counted at the average of your miners, too few of one size to measure separately";
+          advice = `<span class="tag ${r.stalled ? "is-short" : "is-warn"}" title="${escapeHTML(why)}">${label}</span>`;
+        }
         else if (r.moreToStopBuying && r.bought > 0) advice = `<span class="tag is-plain">covered by buying</span><span class="sup-detail">${r.moreToStopBuying} more ${plural(r.moreToStopBuying, "miner")} would end the buying</span>`;
         else if (r.need) advice = `<span class="tag is-ok">covered</span>`;
         else advice = `<span class="dim">not used</span>`;
@@ -2406,7 +2450,7 @@ function actionPlan() {
       if (!r.more) continue;
       items.push({
         impact: lost.get(r.ware) || 0,
-        title: `Add about ${r.more} ${W[r.ware].storageType === "Liquid" ? "gas" : "solid"} ${plural(r.more, "miner")} for ${W[r.ware].label}`,
+        title: `Add ${minerSizes(r, true, W[r.ware].storageType === "Liquid" ? "gas" : "solid").replace(/^A/, "a")} for ${W[r.ware].label}`,
         why: `Supply covers ${fmtPercent(r.cover)} of what your stations use${r.stalled ? `, and ${r.stalled} ${plural(r.stalled, "module")} are stalled for it` : ""}.`,
         tab: "supply", label: "Supply",
       });

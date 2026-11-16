@@ -217,3 +217,31 @@ test("a trader's buy-from-NPC, sell-to-NPC run is trading, not your stations' su
   close(flows.wares.energycells.bought, 50, "the freighter's purchase did feed the factory");
   close(flows.actual.revenue, 2000 + 40 * 210, "the trader's sale is still real money");
 });
+
+test("miner rates are measured per ship size from your own ships", () => {
+  const result = {
+    stations: [{ id: "[hub]" }],
+    ships: [
+      { id: "[m1]", macro: "ship_arg_m_miner_solid_01_a_macro", order: "MiningRoutine" },
+      { id: "[m2]", macro: "ship_arg_m_miner_solid_01_a_macro", order: "MiningRoutine" },
+      { id: "[l1]", macro: "ship_arg_l_miner_solid_01_a_macro", order: "MiningRoutine" },
+      { id: "[l2]", macro: "ship_arg_l_miner_solid_01_a_macro", order: "MiningRoutine" },
+    ],
+    trades: [
+      [0, "ore", "[hub]", "[m1]", 50, 1000],
+      [600, "ore", "[hub]", "[m2]", 50, 1000],
+      [1200, "ore", "[hub]", "[l1]", 50, 4000],
+      [1800, "ore", "[hub]", "[l2]", 50, 4000],
+    ],
+    info: { time: "3600" },
+    log: { start: 0, end: 3600 },
+  };
+  const flows = get("summariseFlows")(result, [{ id: "HUB" }]);
+  const vol = W.ore.volume;
+  close(flows.perMinerSize.Solid.M.rate, 1000 * vol, "an M miner: 1,000 ore an hour");
+  close(flows.perMinerSize.Solid.L.rate, 4000 * vol, "an L miner: 4,000 ore an hour");
+  assert.equal(flows.perMinerSize.Solid.L.miners, 2);
+  const text = get("minerSizes")({ more: 10, bySize: [{ size: "L", n: 3 }, { size: "M", n: 9 }] }, true, "solid");
+  assert.equal(text, "About 3 L or 9 M solid miners");
+  assert.equal(get("minerSizes")({ more: 1, bySize: [] }), "about 1 more miner", "falls back to the fleet average");
+});
