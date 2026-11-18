@@ -3116,8 +3116,11 @@ function showCelebration() {
 
 let modalReturnFocus = null;
 
+let modalCloseTimer = null;
+
 function openModal(html) {
   const modal = $("modal");
+  if (modalCloseTimer) { clearTimeout(modalCloseTimer); modalCloseTimer = null; modal.classList.remove("is-closing"); }
   $("modal-content").innerHTML = html;
   modalReturnFocus = document.activeElement;
   modal.hidden = false;
@@ -3127,7 +3130,17 @@ function openModal(html) {
 
 function closeModal() {
   const modal = $("modal");
-  if (modal.hidden) return;
+  if (modal.hidden || modalCloseTimer) return;
+  // Short ease-in exit (see #modal.is-closing); skipped for reduced motion.
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return finishCloseModal();
+  modal.classList.add("is-closing");
+  modalCloseTimer = setTimeout(finishCloseModal, 120);
+}
+
+function finishCloseModal() {
+  const modal = $("modal");
+  modalCloseTimer = null;
+  modal.classList.remove("is-closing");
   modal.hidden = true;
   $("modal-content").innerHTML = "";
   if (modalReturnFocus && modalReturnFocus.isConnected) modalReturnFocus.focus();
